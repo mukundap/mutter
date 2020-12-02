@@ -248,6 +248,8 @@ mutter_sources = [
   'backends/meta-viewport-info.h',
   'backends/meta-virtual-monitor.c',
   'backends/meta-virtual-monitor.h',
+  'backends/meta-color-manager.c',
+  'backends/meta-color-manager.h',
   'backends/x11/cm/meta-backend-x11-cm.c',
   'backends/x11/cm/meta-backend-x11-cm.h',
   'backends/x11/cm/meta-cursor-sprite-xfixes.c',
