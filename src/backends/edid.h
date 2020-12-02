@@ -189,5 +189,8 @@ struct MonitorInfo
 };
 
 MonitorInfo *decode_edid (const uchar *data);
+const uchar *decode_extended_data_block(const uchar *edid,
+                                        uchar *data_len,
+                                        unsigned int block_tag);
 
 #endif
