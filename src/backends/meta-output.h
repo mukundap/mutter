@@ -103,6 +103,8 @@ typedef struct _MetaOutputInfo
   gboolean supports_underscanning;
   gboolean supports_color_transform;
 
+  /* Display's supported color spaces */
+  gboolean display_supports_colorspace;
   uint16_t supported_colorspaces;
   /*
    * Get a new preferred mode on hotplug events, to handle dynamic guest

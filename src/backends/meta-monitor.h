@@ -118,6 +118,8 @@ gboolean meta_monitor_supports_underscanning (MetaMonitor *monitor);
 
 gboolean meta_monitor_is_underscanning (MetaMonitor *monitor);
 
+gboolean meta_monitor_supports_colorspace (MetaMonitor *monitor);
+
 gboolean meta_monitor_is_laptop_panel (MetaMonitor *monitor);
 
 gboolean meta_monitor_is_same_as (MetaMonitor *monitor,

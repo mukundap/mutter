@@ -405,6 +405,8 @@ meta_output_kms_new (MetaGpuKms        *gpu_kms,
   output_info->supports_underscanning =
     meta_kms_connector_is_underscanning_supported (kms_connector);
 
+  output_info->display_supports_colorspace = connector_state->supports_colorspace;
+  g_print("Display Supports Colorspace = %d\n", output_info->display_supports_colorspace);
   meta_output_info_parse_edid (output_info, connector_state->edid_data);
 
   drm_connector_type = meta_kms_connector_get_connector_type (kms_connector);
