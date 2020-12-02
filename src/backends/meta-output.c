@@ -196,6 +196,15 @@ meta_output_get_backlight (MetaOutput *output)
   return priv->backlight;
 }
 
+uint16_t
+meta_output_get_supported_colorspaces(MetaOutput *output)
+{
+  MetaOutputPrivate *priv = meta_output_get_instance_private (output);
+  MetaOutputInfo *output_info = priv->info;
+
+  return output_info->supported_colorspaces;
+}
+
 void
 meta_output_add_possible_clone (MetaOutput *output,
                                 MetaOutput *possible_clone)

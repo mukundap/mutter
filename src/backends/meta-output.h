@@ -191,6 +191,7 @@ MetaPrivacyScreenState meta_output_get_privacy_screen_state (MetaOutput *output)
 gboolean meta_output_set_privacy_screen_enabled (MetaOutput  *output,
                                                  gboolean     enabled,
                                                  GError     **error);
+uint16_t meta_output_get_supported_colorspaces(MetaOutput *output);
 
 void meta_output_add_possible_clone (MetaOutput *output,
                                      MetaOutput *possible_clone);
