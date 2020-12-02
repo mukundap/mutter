@@ -451,6 +451,15 @@ meta_output_kms_new (MetaGpuKms        *gpu_kms,
   drm_connector_type = meta_kms_connector_get_connector_type (kms_connector);
   output_info->connector_type =
     meta_kms_connector_type_from_drm (drm_connector_type);
+  //TODO : This needs a clarification on the default colorspace if the monitor does not
+  // exhibits non-standard colorspaces.
+  if(!output_info->supported_colorspaces)
+	output_info->target_colorspace = DRM_COLORSPACE_INVALID;
+  else if(output_info->supported_colorspaces & (META_COLORSPACE_TYPE_BT2020YCC
+                                         | META_COLORSPACE_TYPE_BT2020RGB))
+  {
+    output_info->target_colorspace = DRM_COLORSPACE_REC2020;
+  }
 
   output_info->tile_info = connector_state->tile_info;
 
