@@ -72,6 +72,20 @@ typedef enum
   META_PRIVACY_SCREEN_LOCKED = 1 << 2,
 } MetaPrivacyScreenState;
 
+typedef enum
+{
+  META_COLORSPACE_TYPE_Default = 0,
+  META_COLORSPACE_TYPE_xvYCC601 = 1 << 0,
+  META_COLORSPACE_TYPE_xvYCC709 = 1 << 1,
+  META_COLORSPACE_TYPE_sYCC601 = 1 << 2,
+  META_COLORSPACE_TYPE_opYCC601 = 1 << 3,
+  META_COLORSPACE_TYPE_opRGB = 1 << 4,
+  META_COLORSPACE_TYPE_BT2020cYCC = 1 << 5,
+  META_COLORSPACE_TYPE_BT2020YCC = 1 << 6,
+  META_COLORSPACE_TYPE_BT2020RGB = 1 << 7,
+  META_COLORSPACE_TYPE_DCIP3 = 1 << 15,
+} MetaColorSpaceType;
+
 typedef struct _MetaOutputInfo
 {
   grefcount ref_count;
