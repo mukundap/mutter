@@ -201,15 +201,32 @@ process_connector_update (MetaKmsImplDevice  *impl_device,
       meta_topic (META_DEBUG_KMS,
                   "[atomic] Toggling privacy screen to %d on connector %u (%s)",
                   connector_update->privacy_screen.is_enabled,
+		   meta_kms_connector_get_id (connector),
+		   meta_kms_impl_device_get_path (impl_device));
+
+      if (!add_connector_property (impl_device,
+			      connector, req,
+			      META_KMS_CONNECTOR_PROP_PRIVACY_SCREEN_SW_STATE,
+			      connector_update->privacy_screen.is_enabled,
+			      error))
+	return FALSE;
+    }
+
+  if (connector_update->colorspace_changed)
+    {
+      meta_topic (META_DEBUG_KMS,
+                  "[atomic] Setting colorspace on connector %u (%s)",
                   meta_kms_connector_get_id (connector),
                   meta_kms_impl_device_get_path (impl_device));
 
       if (!add_connector_property (impl_device,
                                    connector, req,
-                                   META_KMS_CONNECTOR_PROP_PRIVACY_SCREEN_SW_STATE,
-                                   connector_update->privacy_screen.is_enabled,
+                                   META_KMS_CONNECTOR_PROP_COLORSPACE,
+                                   0,
                                    error))
         return FALSE;
+
+      connector_update->colorspace_changed = FALSE;
     }
 
   return TRUE;

@@ -120,7 +120,8 @@ typedef struct _MetaOutputInfo
   /* Display's supported color spaces */
   gboolean display_supports_colorspace;
   uint16_t supported_colorspaces;
-  unsigned int target_colorspace;
+  uint16_t target_colorspace;
+  uint16_t previous_colorspace;
 
   /*
    * Get a new preferred mode on hotplug events, to handle dynamic guest

@@ -169,10 +169,20 @@ meta_output_kms_set_colorspace (MetaOutputKms *output_kms,
   /*target_colorspace = meta_output_colorspace_to_drm_colorspace(
                                    output_info->display_supports_colorspace);*/
 
+  //TODO : We need to have a check by compring with the previouly set colorspace.
+
   target_colorspace = drm_clrspace_to_kernel_clrspace(drm_colorspace);
+
+  // if the previous colorspace and target colorspace are not same, then set the target colorspace
+  // otherewise ignore it.
+  if(output_info->previous_colorspace == target_colorspace)
+    return;
+
   meta_kms_update_set_colorspace (kms_update,
                                    output_kms->kms_connector,
                                    target_colorspace);
+
+  output_info->previous_colorspace == target_colorspace;
 
   meta_verbose("%s:%s ==>\n", __FILE__,__func__);
 }
