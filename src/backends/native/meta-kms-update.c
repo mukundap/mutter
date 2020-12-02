@@ -328,6 +328,22 @@ meta_kms_update_set_underscanning (MetaKmsUpdate    *update,
   connector_update->underscanning.vborder = vborder;
 }
 
+void meta_kms_update_set_colorspace (MetaKmsUpdate    *update,
+                                      MetaKmsConnector *connector,
+                                      uint16_t target_colorspace)
+
+{
+  MetaKmsConnectorUpdate *connector_update;
+
+  g_assert (!meta_kms_update_is_locked (update));
+  g_assert (meta_kms_connector_get_device (connector) == update->device);
+  g_assert (!update->power_save);
+
+  connector_update = ensure_connector_update (update, connector);
+  connector_update->target_colorspace = target_colorspace;
+  connector_update->colorspace_changed = TRUE;
+}
+
 void
 meta_kms_update_unset_underscanning (MetaKmsUpdate    *update,
                                      MetaKmsConnector *connector)

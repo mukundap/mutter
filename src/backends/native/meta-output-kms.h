@@ -33,6 +33,20 @@ G_DECLARE_FINAL_TYPE (MetaOutputKms, meta_output_kms,
                       META, OUTPUT_KMS,
                       MetaOutputNative)
 
+#define DRM_MODE_COLORIMETRY_DEFAULT               0
+#define DRM_MODE_COLORIMETRY_BT2020_RGB            9
+#define DRM_MODE_COLORIMETRY_BT2020_YCC            10
+#define DRM_MODE_COLORIMETRY_DCI_P3_RGB_D65        11
+#define DRM_MODE_COLORIMETRY_DCI_P3_RGB_THEATER    12
+
+typedef enum {
+       DRM_COLORSPACE_INVALID,
+       DRM_COLORSPACE_REC709,
+       DRM_COLORSPACE_REC2020,
+       DRM_COLORSPACE_DCIP3,
+       DRM_COLORSPACE_MAX,
+} MetaDrmColorspace;
+
 void meta_output_kms_set_power_save_mode (MetaOutputKms *output_kms,
                                           uint64_t       dpms_state,
                                           MetaKmsUpdate *kms_update);

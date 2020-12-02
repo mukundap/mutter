@@ -138,6 +138,45 @@ meta_output_kms_set_privacy_screen_enabled (MetaOutput  *output,
   return TRUE;
 }
 
+uint16_t
+drm_clrspace_to_kernel_clrspace(uint16_t drm_colorspace)
+{
+  switch(drm_colorspace)
+    {
+    case DRM_COLORSPACE_REC2020:
+      return DRM_MODE_COLORIMETRY_BT2020_RGB;
+    case DRM_COLORSPACE_DCIP3:
+      return DRM_MODE_COLORIMETRY_DCI_P3_RGB_D65;
+    case DRM_COLORSPACE_REC709:
+    default:
+      return DRM_MODE_COLORIMETRY_DEFAULT;
+    }
+}
+
+void
+meta_output_kms_set_colorspace (MetaOutputKms *output_kms,
+                              MetaKmsUpdate *kms_update,
+                              uint16_t drm_colorspace)
+{
+  MetaOutput *output = META_OUTPUT (output_kms);
+  const MetaOutputInfo *output_info = meta_output_get_info (output);
+  meta_verbose("==> %s:%s \n", __FILE__,__func__);
+  uint16_t target_colorspace;
+
+  if (!output_info->display_supports_colorspace)
+    return;
+
+  /*target_colorspace = meta_output_colorspace_to_drm_colorspace(
+                                   output_info->display_supports_colorspace);*/
+
+  target_colorspace = drm_clrspace_to_kernel_clrspace(drm_colorspace);
+  meta_kms_update_set_colorspace (kms_update,
+                                   output_kms->kms_connector,
+                                   target_colorspace);
+
+  meta_verbose("%s:%s ==>\n", __FILE__,__func__);
+}
+
 uint32_t
 meta_output_kms_get_connector_id (MetaOutputKms *output_kms)
 {

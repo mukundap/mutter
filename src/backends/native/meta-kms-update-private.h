@@ -82,6 +82,9 @@ typedef struct _MetaKmsConnectorUpdate
     gboolean has_update;
     gboolean is_enabled;
   } privacy_screen;
+
+  uint16_t target_colorspace;
+  gboolean colorspace_changed;
 } MetaKmsConnectorUpdate;
 
 typedef struct _MetaKmsPageFlipListener
