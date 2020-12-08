@@ -205,6 +205,15 @@ meta_output_get_supported_colorspaces(MetaOutput *output)
   return output_info->supported_colorspaces;
 }
 
+gboolean
+meta_output_get_display_supports_colorspace(MetaOutput *output)
+{
+  MetaOutputPrivate *priv = meta_output_get_instance_private (output);
+  MetaOutputInfo *output_info = priv->info;
+
+  return output_info->display_supports_colorspace;
+}
+
 void
 meta_output_add_possible_clone (MetaOutput *output,
                                 MetaOutput *possible_clone)
@@ -295,6 +304,7 @@ meta_output_crtc_to_logical_transform (MetaOutput           *output,
   return meta_monitor_transform_transform (transform,
                                            inverted_panel_orientation_transform);
 }
+
 uint16_t
 meta_output_get_display_colorspace(GBytes *edid)
 {

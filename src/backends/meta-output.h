@@ -210,6 +210,8 @@ gboolean meta_output_set_privacy_screen_enabled (MetaOutput  *output,
                                                  GError     **error);
 uint16_t meta_output_get_supported_colorspaces(MetaOutput *output);
 
+gboolean meta_output_get_display_supports_colorspace(MetaOutput *output);
+
 void meta_output_add_possible_clone (MetaOutput *output,
                                      MetaOutput *possible_clone);
 
@@ -232,5 +234,7 @@ MetaMonitorTransform meta_output_logical_to_crtc_transform (MetaOutput          
 
 MetaMonitorTransform meta_output_crtc_to_logical_transform (MetaOutput           *output,
                                                             MetaMonitorTransform  transform);
+
+uint16_t meta_output_get_display_colorspace(GBytes *edid);
 
 #endif /* META_OUTPUT_H */
