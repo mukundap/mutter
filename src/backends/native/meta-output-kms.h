@@ -66,4 +66,6 @@ MetaOutputKms * meta_output_kms_new (MetaGpuKms        *gpu_kms,
                                      MetaOutput        *old_output,
                                      GError           **error);
 
+uint16_t drm_clrspace_to_kernel_clrspace(uint16_t drm_colorspace);
+
 #endif /* META_OUTPUT_KMS_H */

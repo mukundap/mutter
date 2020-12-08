@@ -159,7 +159,7 @@ meta_output_kms_set_colorspace (MetaOutputKms *output_kms,
                               uint16_t drm_colorspace)
 {
   MetaOutput *output = META_OUTPUT (output_kms);
-  const MetaOutputInfo *output_info = meta_output_get_info (output);
+  MetaOutputInfo *output_info = meta_output_get_info (output);
   meta_verbose("==> %s:%s \n", __FILE__,__func__);
   uint16_t target_colorspace;
 
@@ -182,7 +182,7 @@ meta_output_kms_set_colorspace (MetaOutputKms *output_kms,
                                    output_kms->kms_connector,
                                    target_colorspace);
 
-  output_info->previous_colorspace == target_colorspace;
+  output_info->previous_colorspace = target_colorspace;
 
   meta_verbose("%s:%s ==>\n", __FILE__,__func__);
 }

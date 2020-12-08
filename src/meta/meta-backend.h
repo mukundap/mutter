@@ -32,7 +32,6 @@
 #include "meta/meta-idle-monitor.h"
 #include "meta/meta-monitor-manager.h"
 #include "meta/meta-remote-access-controller.h"
-#include "backends/meta-color-manager.h"
 
 #define META_TYPE_BACKEND (meta_backend_get_type ())
 META_EXPORT
