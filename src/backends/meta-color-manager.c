@@ -54,6 +54,8 @@ typedef struct _MetaColorManager
   MetaColorTransformPath path;
 
   gboolean gl_extn_support;
+  gboolean display_supports_colorspace;
+  gboolean use_gl_shaders;
 
 } MetaColorManager;
 
@@ -71,7 +73,7 @@ meta_color_manager_new (MetaBackend *backend)
   return cm;
 }
 
-gboolean
+/*gboolean
 meta_color_manager_check_gl_extn_support(MetaBackend *backend)
 {
   MetaEgl *egl = meta_backend_get_egl (backend);
@@ -87,8 +89,13 @@ meta_color_manager_check_gl_extn_support(MetaBackend *backend)
 
   g_print("UDAY --- system supports GL_OES_EGL_IMAGE_Extenstion  \n");
   return TRUE;
-}
+}*/
 
+/* TODO Getting the target colorspace should be implemented by
+ * considering multi monitor and multi gpu. This needs discussion
+ * in the team.
+ * For time being, it is implemented by considering single monitor
+ */
 uint16_t
 meta_color_manager_get_target_colorspace(MetaBackend *backend)
 {
@@ -96,6 +103,9 @@ meta_color_manager_get_target_colorspace(MetaBackend *backend)
   GList *gpus;
   GList *outputs;
   uint16_t supported_colorspaces;
+  uint16_t target_colorspace = META_COLORSPACE_TYPE_Default;
+  gboolean display_supports_colorspace = FALSE;
+  MetaColorManager *color_manager = meta_backend_get_color_manager (backend);
 
   /* TODO : Below changes are to handle the primary monitor for timebeing.
      Need to do the changes if multiples GPU and Outputs are present */
@@ -104,6 +114,9 @@ meta_color_manager_get_target_colorspace(MetaBackend *backend)
   output = g_list_first(outputs)->data;
 
   supported_colorspaces = meta_output_get_supported_colorspaces(output);
+  display_supports_colorspace =
+         meta_output_get_display_supports_colorspace(output);
+  color_manager->display_supports_colorspace = display_supports_colorspace;
 
   /* TODO : make the decision here on colortransform path. But more
    * brainstorming is needed on how to get the suface(s) details here.
@@ -111,14 +124,54 @@ meta_color_manager_get_target_colorspace(MetaBackend *backend)
    * MetaWaylandColorManagement, because it is having the surface details */
 
   meta_verbose("%s:%s -- supported_colorspaces = %u ", __FILE__,__func__, supported_colorspaces);
+  // TODO Below code needs to be removed because we are already doing this check in meta-output.c
+  // need to check one more time.
+  if( supported_colorspaces & META_COLORSPACE_TYPE_BT2020RGB )
+    {
+      target_colorspace = META_COLORSPACE_TYPE_BT2020RGB;
+    }
 
-  return supported_colorspaces;
+  return target_colorspace;
+}
+
+void
+meta_color_manager_perform_csc(uint32_t client_color_space)
+{
+  MetaBackend *backend = meta_get_backend ();
+  MetaColorManager *color_manager =
+         meta_backend_get_color_manager (backend);
+  uint16_t target_colorspace;
+  gboolean needs_csc = false;
+
+  target_colorspace = meta_color_manager_get_target_colorspace(backend);
+  needs_csc = target_colorspace != client_color_space;
+  gboolean display_supports_colorspace =FALSE;
+
+  display_supports_colorspace = color_manager->display_supports_colorspace;
+
+  if(!needs_csc)
+    return;
+
+  // TODO need to check when to toggle this use_gl_shaders variable after once commit
+
+  if(display_supports_colorspace)
+    {
+      // perform the degamma for non-linear to linear transform
+      // perform CSC/CTM for color gamu mapping
+      // perform Gamma for linear to non-linear transform
+      color_manager->use_gl_shaders = FALSE;
+    }
+  else
+    {
+      //Set the use_gl_shaders variable to use the gl_shaders to perform csc
+      color_manager->use_gl_shaders = TRUE;
+    }
+  return;
 }
 
 static void
 meta_color_manager_finalize (GObject *object)
 {
-  MetaColorManager *manager = META_COLOR_MANAGER(object);
 
   G_OBJECT_CLASS (meta_color_manager_parent_class)->finalize (object);
 }

@@ -42,8 +42,6 @@ meta_wayland_surface_state_set_color_space (
     return;
 
   pending_state->color_space = color_space;
-  if (color_space)
-    color_space = META_CS_UNKNOWN;
 }
 
 static uint32_t
@@ -150,10 +148,20 @@ color_management_surface_set_color_space (struct wl_client *client,
 {
   MetaWaylandSurface *surface =
 	wl_resource_get_user_data (resource);
-  uint32_t color_space =
-        wl_resource_get_user_data(cs_resource);
+  uint32_t client_color_space =
+	wl_resource_get_user_data(cs_resource);
 
-  meta_wayland_surface_state_set_color_space(&surface->pending_state, color_space);
+  meta_verbose ("%s:%s  color_space = %d \n", __FILE__, __func__,client_color_space);
+
+  surface->color_space = client_color_space;
+  meta_wayland_surface_state_set_color_space (&surface->pending_state,
+                                             client_color_space);
+
+  if(client_color_space != META_CS_UNKNOWN)
+    {
+      meta_color_manager_perform_csc(client_color_space);
+    }
+  // surface->pending.render_intent = render_intent;
 }
 
 static void
