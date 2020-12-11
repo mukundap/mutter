@@ -5,5 +5,21 @@
 #include <stdio.h>
 #include <math.h>
 
+typedef struct
+{
+    double x;           // CIE1931 x
+    double y;           // CIE1931 y
+    double luminance;   // CIE1931 Y
+}Chromaticity;
+
+typedef struct
+{
+    Chromaticity white;
+    Chromaticity red;
+    Chromaticity green;
+    Chromaticity blue;
+}ColorSpace;
+
+
 extern void create_unity_log_lut(uint32_t NumOfSegments, uint32_t *NumEntriesPerSegment, uint32_t *pOutputLut);
 #endif //End of META_KMS_COLOR_UTILITY_H
