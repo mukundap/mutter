@@ -138,7 +138,15 @@ void CreateGamutScalingMatrix(ColorSpace* pSrc, ColorSpace* pDst, double result[
         MatrixInverse3x3(mat2, tmp);
         MatrixMult3x3(tmp, mat1, result);
 }
-
+void GetCTMForSrcToDestColorSpace(ColorSpace srcColorSpace, ColorSpace destColorSpace, double result[3][3])
+{
+/*
+ https://en.wikipedia.org/wiki/Rec._2020#System_colorimetry
+ https://en.wikipedia.org/wiki/Rec._709#Primary_chromaticities
+*/
+CreateGamutScalingMatrix(&srcColorSpace, &destColorSpace, result);
+}
+#if 0
 void GetCTMForBT709ToBT2020(double result[3][3])
 {
 /*
@@ -198,4 +206,4 @@ void GetCTMForBT2020ToBT709(double result[3][3])
         bt709.blue.y = 0.06;
         CreateGamutScalingMatrix(&bt2020, &bt709, result);
 }
-
+#endif
