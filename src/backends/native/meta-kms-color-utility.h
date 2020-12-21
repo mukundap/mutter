@@ -20,6 +20,18 @@ typedef struct
     Chromaticity blue;
 }ColorSpace;
 
+//LUT related structures:
+typedef struct{
+        double red;
+        double green;
+        double blue;
+}ColorRGB;
+
+typedef struct{
+        int  nSamples;
+        double maxVal;
+        ColorRGB *pLutData;
+}OneDLUT;
 
 extern void create_unity_log_lut(uint32_t NumOfSegments, uint32_t *NumEntriesPerSegment, uint32_t *pOutputLut);
 extern void GetCTMForSrcToDestColorSpace(ColorSpace src, ColorSpace dst, double ctmResult[3][3]);

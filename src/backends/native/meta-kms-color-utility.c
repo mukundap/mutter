@@ -2,6 +2,13 @@
 #include "backends/native/meta-kms-color-utility.h"
 #include "backends/native/meta-kms.h"
 
+//Reference: https://nick-shaw.github.io/cinematiccolor/common-rgb-color-spaces.html
+double m1 = 0.1593017578125;
+double m2 = 78.84375;
+double c1 = 0.8359375;
+double c2 = 18.8515625;
+double c3 = 18.6875;
+
 #define DD_MIN(a, b) ((a) < (b) ? (a) : (b))
 #define DD_MAX(a, b) ((a) < (b) ? (b) : (a))
 #define MAX_24BIT_NUM ((1<<24) -1)
@@ -207,3 +214,68 @@ void GetCTMForBT2020ToBT709(double result[3][3])
         CreateGamutScalingMatrix(&bt2020, &bt709, result);
 }
 #endif
+
+double OETF_2084(double input, double srcMaxLuminance)
+{
+        double cf=1.0f;
+        double output=0.0f;
+        if(input != 0.0f)
+        {
+                cf = srcMaxLuminance / 10000.0;
+                input *= cf;
+                output = pow(((c1 + (c2 * pow(input, m1))) / (1 + (c3 * pow(input, m1)))), m2);
+        }
+        return output;
+}
+
+/*
+Reference: https://nick-shaw.github.io/cinematiccolor/common-rgb-color-spaces.html
+
+The ST 2084 EOTF is an absolute encoding, defined by the following equation:
+	L=10000×{max(V^1∕m2−c1,0)/(c2−c3×V^1∕m2)}^1∕m1
+where constants are:
+	m1 = 2610∕16384
+	m2 = 2523∕4096×128
+	c1 = 3424∕4096
+	c2 = 2413∕4096×32
+	c3 = 2392∕4096×32
+*/
+double EOTF_2084(double input)
+{
+        double output = 0.0f;
+        if(input != 0.0f)
+        {
+                output = pow(((fmax((pow(input, (1.0/m2)) - c1), 0)) / (c2 - (c3* pow(input, (1.0 / m2))))), (1.0/m1));
+        }
+        return output;
+}
+
+void GenerateOETF2084LUT(OneDLUT *lut)
+{
+        for (int i=0; i<lut->nSamples; i++)
+        {
+                lut->pLutData[i].red = (double) i / (double)(lut->nSamples - 1);
+                lut->pLutData[i].red = OETF_2084(lut->pLutData[i].red, 10000.0);
+        }
+}
+
+void GenerateEOTF2084LUT(OneDLUT *lut)
+{
+        for (int i=0; i<lut->nSamples; i++)
+        {
+                lut->pLutData[i].red = (double) i / (double)(lut->nSamples -1);
+                lut->pLutData[i].red = EOTF_2084(lut->pLutData[i].red);
+        }
+}
+
+void PopulateStandardLut(char *StandardLutKey, OneDLUT *lut)
+{
+        if(!strcmp(StandardLutKey, "eotf2084"))
+                GenerateEOTF2084LUT(lut);
+        else if(!strcmp(StandardLutKey, "oetf2084"))
+                GenerateOETF2084LUT(lut);
+        else
+                printf("This custom CURVE is not supported for LUT values");
+
+}
+
