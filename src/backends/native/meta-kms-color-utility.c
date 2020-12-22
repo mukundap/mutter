@@ -254,8 +254,8 @@ void GenerateOETF2084LUT(OneDLUT *lut)
 {
         for (int i=0; i<lut->nSamples; i++)
         {
-                lut->pLutData[i].red = (double) i / (double)(lut->nSamples - 1);
-                lut->pLutData[i].red = OETF_2084(lut->pLutData[i].red, 10000.0);
+                lut->pLutData[i]= (double) i / (double)(lut->nSamples - 1);
+                lut->pLutData[i]= OETF_2084(lut->pLutData[i], 10000.0);
         }
 }
 
@@ -263,8 +263,8 @@ void GenerateEOTF2084LUT(OneDLUT *lut)
 {
         for (int i=0; i<lut->nSamples; i++)
         {
-                lut->pLutData[i].red = (double) i / (double)(lut->nSamples -1);
-                lut->pLutData[i].red = EOTF_2084(lut->pLutData[i].red);
+                lut->pLutData[i]= (double) i / (double)(lut->nSamples -1);
+                lut->pLutData[i]= EOTF_2084(lut->pLutData[i]);
         }
 }
 

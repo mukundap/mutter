@@ -22,15 +22,9 @@ typedef struct
 
 //LUT related structures:
 typedef struct{
-        double red;
-        double green;
-        double blue;
-}ColorRGB;
-
-typedef struct{
         int  nSamples;
         double maxVal;
-        ColorRGB *pLutData;
+        double *pLutData;
 }OneDLUT;
 
 extern void create_unity_log_lut(uint32_t NumOfSegments, uint32_t *NumEntriesPerSegment, uint32_t *pOutputLut);
