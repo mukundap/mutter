@@ -279,3 +279,44 @@ void PopulateStandardLut(char *StandardLutKey, OneDLUT *lut)
 
 }
 
+double GetSRGBDecodingValue(double input)
+{
+/*
+ https://en.wikipedia.org/wiki/SRGB#The_forward_transformation_.28CIE_xyY_or_CIE_XYZ_to_sRGB.29
+*/
+	double output = 0.0f;
+	if (input <= 0.004045f)
+	       output =  input / 12.92f;
+	else
+		output = pow(((input + 0.055)/1.055), 2.4);
+	return output;
+}
+
+void GenerateSrgbDegammaLut(OneDLUT *lut)
+{
+	for (int i=0; i<lut->nSamples; i++)
+	{
+		lut->pLutData[i] = (double) i/ (double) (lut->nSamples - 1);
+		lut->pLutData[i] = GetSRGBDecodingValue(lut->pLutData[i]);
+	}
+}
+
+
+double GetSRGBEncodingValue(double input)
+{
+       double output = 0.0f;
+       if(input <= 0.0031308f)
+               output = input * 12.92;
+       else
+               output = (1.055 * pow(input,1.0/2.4)) - 0.055;
+       return output;
+}
+void GenerateSrgbGammaLut(OneDLUT *lut)
+{
+       for(int i=0; i<lut->nSamples; i++)
+       {
+                lut->pLutData[i]= (double) i / (double)(lut->nSamples -1);
+                lut->pLutData[i]= GetSRGBEncodingValue(lut->pLutData[i]);
+       }
+}
+
