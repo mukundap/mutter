@@ -134,6 +134,15 @@ meta_color_manager_get_target_colorspace(MetaBackend *backend)
   return target_colorspace;
 }
 
+gboolean
+meta_color_manager_get_use_glshaders(void)
+{
+  MetaColorManager *color_manager =
+         meta_backend_get_color_manager (meta_get_backend());
+
+  return color_manager->use_gl_shaders;
+}
+
 void
 meta_color_manager_perform_csc(uint32_t client_color_space)
 {

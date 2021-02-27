@@ -49,4 +49,6 @@ uint16_t meta_color_manager_get_target_colorspace(MetaBackend *backend);
 
 void meta_color_manager_perform_csc(uint32_t client_color_space);
 
+gboolean meta_color_manager_get_use_glshaders(void);
+
 #endif /* META_COLOR_MANAGER_H */
