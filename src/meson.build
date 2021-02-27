@@ -353,6 +353,8 @@ mutter_sources = [
   'compositor/meta-window-shape.c',
   'compositor/region-utils.c',
   'compositor/region-utils.h',
+  'compositor/meta-gl-shaders.c',
+  'compositor/meta-gl-shaders.h',
   'core/bell.c',
   'core/bell.h',
   'core/boxes.c',
