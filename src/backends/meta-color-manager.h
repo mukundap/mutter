@@ -1,7 +1,6 @@
 /* -*- mode: C; c-file-style: "gnu"; indent-tabs-mode: nil; -*- */
 /*
- * Copyright (C) 2020 Intel Corporation.
- * Copyright (C) 2020 Red Hat
+ * Copyright (C) 2020 -21 Intel Corporation.
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -19,7 +18,6 @@
  * Authors:
  *   Uday Kiran Pichika <pichika.uday.kiran@intel.com>
  *   Naveen Kumar <naveen1.kumar@intel.com>
- *   Jonas Adhal <jadahl@redhat.com>
  *
  */
 
@@ -50,5 +48,8 @@ uint16_t meta_color_manager_get_target_colorspace(MetaBackend *backend);
 void meta_color_manager_perform_csc(uint32_t client_color_space);
 
 gboolean meta_color_manager_get_use_glshaders(void);
+
+void meta_color_manager_get_colorspaces(uint32_t *client_colorspace,
+                                                  uint16_t *target_colorspace);
 
 #endif /* META_COLOR_MANAGER_H */

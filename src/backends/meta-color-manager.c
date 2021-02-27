@@ -1,7 +1,6 @@
 /* -*- mode: C; c-file-style: "gnu"; indent-tabs-mode: nil; -*- */
 /*
- * Copyright (C) 2020 Intel Corporation.
- * Copyright (C) 2020 Red Hat
+ * Copyright (C) 2020-21 Intel Corporation.
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -19,8 +18,6 @@
  * Authors:
  *   Uday Kiran Pichika <pichika.uday.kiran@intel.com>
  *   Naveen Kumar <naveen1.kumar@intel.com>
- *   Jonas Adhal <jadahl@redhat.com>
- *
  */
 
 /*
@@ -56,6 +53,8 @@ typedef struct _MetaColorManager
   gboolean gl_extn_support;
   gboolean display_supports_colorspace;
   gboolean use_gl_shaders;
+  uint32_t client_colorspace;
+  uint16_t target_colorspace;
 
 } MetaColorManager;
 
@@ -72,24 +71,6 @@ meta_color_manager_new (MetaBackend *backend)
 
   return cm;
 }
-
-/*gboolean
-meta_color_manager_check_gl_extn_support(MetaBackend *backend)
-{
-  MetaEgl *egl = meta_backend_get_egl (backend);
-  ClutterBackend *clutter_backend = meta_backend_get_clutter_backend (backend);
-  CoglContext *cogl_context = clutter_backend_get_cogl_context (clutter_backend);
-  EGLDisplay egl_display = cogl_egl_context_get_egl_display (cogl_context);
-
-  g_assert (backend && egl && clutter_backend && cogl_context && egl_display);
-
-  if (!meta_egl_has_extensions (egl, egl_display, NULL,
-                                "GL_OES_EGL_image_external", NULL))
-    return FALSE;
-
-  g_print("UDAY --- system supports GL_OES_EGL_IMAGE_Extenstion  \n");
-  return TRUE;
-}*/
 
 /* TODO Getting the target colorspace should be implemented by
  * considering multi monitor and multi gpu. This needs discussion
@@ -126,6 +107,7 @@ meta_color_manager_get_target_colorspace(MetaBackend *backend)
   meta_verbose("%s:%s -- supported_colorspaces = %u ", __FILE__,__func__, supported_colorspaces);
   // TODO Below code needs to be removed because we are already doing this check in meta-output.c
   // need to check one more time.
+  //There is some problem with the ENUM declaration values. Need to check.
   if( supported_colorspaces & META_COLORSPACE_TYPE_BT2020RGB )
     {
       target_colorspace = META_COLORSPACE_TYPE_BT2020RGB;
@@ -144,7 +126,17 @@ meta_color_manager_get_use_glshaders(void)
 }
 
 void
-meta_color_manager_perform_csc(uint32_t client_color_space)
+meta_color_manager_get_colorspaces(uint32_t *client_colorspace,
+                                              uint16_t *target_colorspace)
+{
+  MetaColorManager *color_manager =
+         meta_backend_get_color_manager (meta_get_backend ());
+  *client_colorspace = color_manager->client_colorspace;
+  *target_colorspace = color_manager->target_colorspace;
+}
+
+void
+meta_color_manager_perform_csc(uint32_t client_colorspace)
 {
   MetaBackend *backend = meta_get_backend ();
   MetaColorManager *color_manager =
@@ -153,8 +145,10 @@ meta_color_manager_perform_csc(uint32_t client_color_space)
   gboolean needs_csc = false;
 
   target_colorspace = meta_color_manager_get_target_colorspace(backend);
-  needs_csc = target_colorspace != client_color_space;
+  needs_csc = target_colorspace != client_colorspace;
   gboolean display_supports_colorspace =FALSE;
+  color_manager->client_colorspace = client_colorspace;
+  color_manager->target_colorspace = target_colorspace;
 
   display_supports_colorspace = color_manager->display_supports_colorspace;
 
