@@ -45,6 +45,8 @@
 #include "compositor/region-utils.h"
 #include "core/boxes-private.h"
 #include "meta/meta-shaped-texture.h"
+#include "compositor/meta-gl-shaders.h"
+#include "meta/meta-color-management.h"
 
 /* MAX_MIPMAPPING_FPS needs to be as small as possible for the best GPU
  * performance, but higher than the refresh rate of commonly slow updating
@@ -378,8 +380,53 @@ get_base_pipeline (MetaShapedTexture *stex,
 
   cogl_pipeline_set_layer_matrix (pipeline, 0, &matrix);
 
-  if (stex->snippet)
-    cogl_pipeline_add_layer_snippet (pipeline, 0, stex->snippet);
+  gboolean needs_csc = meta_color_manager_maybe_needs_csc();
+  if(needs_csc)
+    {
+      uint32_t client_colorspace = 0; //TODO this type needs to be changed to uint16_t
+      uint16_t target_colorspace = 0;
+      uint32_t shader_requirements = 0;
+
+      meta_color_manager_get_colorspaces(&client_colorspace, &target_colorspace);
+
+      uint16_t cs = meta_color_manager_map_targetCS_to_clientCS(target_colorspace);
+
+      if(client_colorspace != target_colorspace)
+        {
+          if(client_colorspace == META_CS_BT709)
+            {
+              if(cs == META_CS_BT2020)
+                {
+                  shader_requirements |= SHADER_KEY_VARIANT_DEGAMMA_SRGB;
+                  shader_requirements |= SHADER_KEY_VARIANT_CSC_BT709_TO_BT2020;
+                  shader_requirements |= SHADER_KEY_VARIANT_GAMMA_SRGB;
+                }
+            }
+          else if(client_colorspace == META_CS_BT2020)
+            {
+              if(target_colorspace == META_CS_BT709)
+                {
+                  shader_requirements |= SHADER_KEY_VARIANT_DEGAMMA_SRGB;
+                  shader_requirements |= SHADER_KEY_VARIANT_CSC_BT2020_TO_BT709;
+                  shader_requirements |= SHADER_KEY_VARIANT_GAMMA_SRGB;
+                }
+            }
+        }
+
+      // Get the Shader snippets and add them to the pipeline
+      CoglSnippet* fs_snippet = meta_gl_shaders_get_fragment_shader_snippet(shader_requirements);
+      CoglSnippet* layer_snippet = meta_gl_shaders_get_layer_snippet();
+
+      cogl_pipeline_add_snippet(pipeline, fs_snippet);
+
+      cogl_pipeline_add_layer_snippet (pipeline, 0, layer_snippet);
+      cogl_pipeline_add_layer_snippet (pipeline, 1, layer_snippet);
+    }
+  else
+    {
+      if (stex->snippet)
+        cogl_pipeline_add_layer_snippet (pipeline, 0, stex->snippet);
+    }
 
   stex->base_pipeline = pipeline;
 
