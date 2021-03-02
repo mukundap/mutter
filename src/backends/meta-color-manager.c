@@ -42,6 +42,7 @@
 #include "backends/meta-color-manager.h"
 #include "backends/meta-output.h"
 #include "meta/util.h"
+#include "meta/meta-color-management.h"
 
 typedef struct _MetaColorManager
 {
@@ -55,7 +56,6 @@ typedef struct _MetaColorManager
   gboolean use_gl_shaders;
   uint32_t client_colorspace;
   uint16_t target_colorspace;
-
 } MetaColorManager;
 
 G_DEFINE_TYPE (MetaColorManager, meta_color_manager, G_TYPE_OBJECT);
@@ -104,7 +104,6 @@ meta_color_manager_get_target_colorspace(MetaBackend *backend)
    * May be it would be easy if the decision to be taken at
    * MetaWaylandColorManagement, because it is having the surface details */
 
-  meta_verbose("%s:%s -- supported_colorspaces = %u ", __FILE__,__func__, supported_colorspaces);
   // TODO Below code needs to be removed because we are already doing this check in meta-output.c
   // need to check one more time.
   //There is some problem with the ENUM declaration values. Need to check.
@@ -133,6 +132,24 @@ meta_color_manager_get_colorspaces(uint32_t *client_colorspace,
          meta_backend_get_color_manager (meta_get_backend ());
   *client_colorspace = color_manager->client_colorspace;
   *target_colorspace = color_manager->target_colorspace;
+}
+
+uint16_t
+meta_color_manager_map_targetCS_to_clientCS(uint16_t target_colorspace)
+{
+  if((target_colorspace && META_COLORSPACE_TYPE_BT2020RGB) ||
+    (target_colorspace && META_COLORSPACE_TYPE_BT2020YCC))
+    {
+      return META_CS_BT2020;
+    }
+  else if(target_colorspace && META_COLORSPACE_TYPE_xvYCC709)
+    {
+      return META_CS_BT709;
+    }
+  else
+    {
+      return META_CS_UNKNOWN;
+    }
 }
 
 void

@@ -52,4 +52,7 @@ gboolean meta_color_manager_get_use_glshaders(void);
 void meta_color_manager_get_colorspaces(uint32_t *client_colorspace,
                                                   uint16_t *target_colorspace);
 
+uint16_t
+meta_color_manager_map_targetCS_to_clientCS(uint16_t target_colorspace);
+
 #endif /* META_COLOR_MANAGER_H */
