@@ -56,6 +56,7 @@ typedef struct _MetaColorManager
   gboolean use_gl_shaders;
   uint32_t client_colorspace;
   uint16_t target_colorspace;
+  gboolean needs_csc;
 } MetaColorManager;
 
 G_DEFINE_TYPE (MetaColorManager, meta_color_manager, G_TYPE_OBJECT);
@@ -124,6 +125,15 @@ meta_color_manager_get_use_glshaders(void)
   return color_manager->use_gl_shaders;
 }
 
+gboolean
+meta_color_manager_maybe_needs_csc()
+{
+  MetaColorManager *color_manager =
+         meta_backend_get_color_manager (meta_get_backend ());
+
+  return color_manager->needs_csc;
+}
+
 void
 meta_color_manager_get_colorspaces(uint32_t *client_colorspace,
                                               uint16_t *target_colorspace)
@@ -166,6 +176,7 @@ meta_color_manager_perform_csc(uint32_t client_colorspace)
   gboolean display_supports_colorspace =FALSE;
   color_manager->client_colorspace = client_colorspace;
   color_manager->target_colorspace = target_colorspace;
+  color_manager->needs_csc = needs_csc;
 
   display_supports_colorspace = color_manager->display_supports_colorspace;
 
