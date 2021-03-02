@@ -1,6 +1,6 @@
 /* -*- mode: C; c-file-style: "gnu"; indent-tabs-mode: nil; -*- */
 /*
- * Copyright (C) 2020 Intel Corporation.
+ * Copyright (C) 2020-21 Intel Corporation.
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -20,7 +20,7 @@
  *
  */
 
-/** When converting from YUV BT.709 to BT.2020, below stages will be involved
+/* When converting from YUV BT.709 to BT.2020, below stages will be involved
  * Stage1 : YUV to RGB --> After this conversion, RGB is in non-linear fashion
  * Stage2 : Apply EOTF curve --> non-linear to Linear conversion
  * Stage3 : convert BT.709 RGB colorspace to BT.2020 colorspace
@@ -29,6 +29,7 @@
  */
  
  #include "compositor/meta-gl-shaders.h"
+#include <string.h>
  
  G_DEFINE_TYPE (MetaGLShaders, meta_gl_shaders, G_TYPE_OBJECT);
  
@@ -54,8 +55,8 @@ static const char eotf_srgb[] =
 static const char bt709_to_bt2020_srgb[] =
 	"vec3 bt709_to_bt2020_srgb(vec3 color) {\n"
 	"  float r = 0.627 * color.r + 0.3293 * color.g  + 0.433 * color.b;\n"
-	"  float r = 0.0691 * color.r + 0.9195 * color.g  + 0.0144 * color.b;\n"
-	"  float r = 0.0164 * color.r + 0.0880 * color.g  + 0.8956 * color.b;\n"
+	"  float g = 0.0691 * color.r + 0.9195 * color.g  + 0.0144 * color.b;\n"
+	"  float b = 0.0164 * color.r + 0.0880 * color.g  + 0.8956 * color.b;\n"
 	"  return vec3(r,g,b);\n"
 	"}\n";
 
@@ -83,10 +84,74 @@ static const char oetf_srgb[] =
 	"}\n"
 	"\n";
 
+static const char layer_func[] =
+	" vec4 layer_func(vec2 st) {\n"
+	"{\n"
+	"    vec3 rgb =texture2D (cogl_sampler0, UV).rgb;\n"
+	"    vec3 linear = eotf(rgb);\n"
+	"    vec3 csc = bt709_to_bt2020_srgb(linear);\n"
+	"    vec3 nonlinear = oetf(csc);\n"
+	"    return vec4(nonlinear,1.0);\n"
+	"}\n"
+	"\n";
+
+static const char full_shader[] =
+	"float eotf_srgb_single(float c) {\n"
+	"    return c < 0.04045 ? c / 12.92 : pow(((c + 0.055) / 1.055), 2.4);\n"
+	"}\n"
+	"\n"
+	"vec3 eotf_srgb(vec3 color) {\n"
+	"    float r = eotf_srgb_single(color.r);\n"
+	"    float g = eotf_srgb_single(color.g);\n"
+	"    float b = eotf_srgb_single(color.b);\n"
+	"    return vec3(r, g, b);\n"
+	"}\n"
+	"\n"
+	"vec3 eotf(vec3 color) {\n"
+	"    return sign(color) * eotf_srgb(abs(color.rgb));\n"
+	"}\n"
+	"\n"
+	"vec3 bt709_to_bt2020_srgb(vec3 color) {\n"
+	"  float r = 0.627 * color.r + 0.3293 * color.g  + 0.433 * color.b;\n"
+	"  float g = 0.0691 * color.r + 0.9195 * color.g  + 0.0144 * color.b;\n"
+	"  float b = 0.0164 * color.r + 0.0880 * color.g  + 0.8956 * color.b;\n"
+	"  return vec3(r,g,b);\n"
+	"}\n"
+	"float oetf_srgb_single(float c) {\n"
+	"    float ret = 0.0;\n"
+	"    if (c < 0.0031308) {\n"
+	"        ret = 12.92 * c;\n"
+	"    } else {\n"
+	"        ret = 1.055 * pow(c, 1.0 / 2.4) - 0.055;\n"
+	"    }\n"
+	"    return ret;\n"
+	"}\n"
+	"\n"
+	"vec3 oetf_srgb(vec3 color) {\n"
+	"    float r = oetf_srgb_single(color.r);\n"
+	"    float g = oetf_srgb_single(color.g);\n"
+	"    float b = oetf_srgb_single(color.b);\n"
+	"    return vec3(r, g, b);\n"
+	"}\n"
+	"\n"
+	"vec3 oetf(vec3 linear) {\n"
+	"    return sign(linear) * oetf_srgb(abs(linear.rgb));\n"
+	"}\n"
+	"\n"
+	" vec4 layer_func(vec2 st) \n"
+	"{\n"
+	"    vec3 pqr =texture2D (cogl_sampler0, st).rgb;\n"
+	"    vec3 linear = eotf(pqr);\n"
+	"    vec3 csc = bt709_to_bt2020_srgb(linear);\n"
+	"    vec3 nonlinear = oetf(csc);\n"
+	"    return vec4(nonlinear,1.0);\n"
+	"}\n"
+	"\n";
+
 MetaGLShaders *
-meta_gl_shaders_new (MetaGLShaderKeyVariant shader_variant)
+meta_gl_shaders_new ()
 {
-  MetaGLShaders *gl_shaders;
+  MetaGLShaders *gl_shaders = g_object_new(META_TYPE_GL_SHADERS, NULL);
 
   uint32_t key_requirements =
 		SHADER_KEY_VARIANT_DEGAMMA_MASK |
@@ -94,8 +159,6 @@ meta_gl_shaders_new (MetaGLShaderKeyVariant shader_variant)
 		SHADER_KEY_VARIANT_GAMMA_MASK;
  
   gl_shaders->shader_requirements &= ~key_requirements;
-  gl_shaders->shader_requirements |= shader_variant;
-  g_print("%s:%s  ==> \n" , __FILE__,__func__);  
 
   return gl_shaders;
 }
@@ -111,26 +174,26 @@ meta_gl_shaders_get_vertex_shader_snippet_test()
 
   // Create the Vertex snippet based on the shader string and return
   snippet = cogl_snippet_new (COGL_SNIPPET_HOOK_VERTEX_GLOBALS,
-		                  "",
-                          vertex_hook);
+                                NULL,
+                                vertex_hook);
   return snippet;
 }
 
 CoglSnippet *
-meta_gl_shaders_get_fragment_shader_snippet()
+meta_gl_shaders_get_fragment_shader_snippet(uint32_t shader_requirements)
 {
   const char *fragment_hook;
-  CoglSnippet *snippet; 
+  CoglSnippet *snippet;
 
-  // TODO need to create the fragment shader snippet based on
+  // TODO need to create the fragment shader hook based on
   // input colorspace and output colorspace.
   // Shader string should be created dynamically and assigned here
-  fragment_hook = NULL;
 
-  // Create the Fragment snippet based on the shader string and return
+  fragment_hook = full_shader; // TODO hardcoding to verify the functionality
+
   snippet = cogl_snippet_new (COGL_SNIPPET_HOOK_FRAGMENT_GLOBALS,
-                                            fragment_hook,
-                                            NULL);
+                                fragment_hook,
+                                NULL);
   return snippet;
 }
 
@@ -144,9 +207,8 @@ meta_gl_shaders_get_layer_snippet()
   layer_hook = "  cogl_layer = layer_func(cogl_tex_coord0_in.st);\n";
 
   snippet = cogl_snippet_new (COGL_SNIPPET_HOOK_LAYER_FRAGMENT,
-                               NULL,
-                               layer_hook);
-
+                                NULL,
+                                layer_hook);
   return snippet;
 
 }

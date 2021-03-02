@@ -57,6 +57,8 @@ typedef struct _MetaColorManager
   uint32_t client_colorspace;
   uint16_t target_colorspace;
   gboolean needs_csc;
+  MetaGLShaders *gl_shaders;
+
 } MetaColorManager;
 
 G_DEFINE_TYPE (MetaColorManager, meta_color_manager, G_TYPE_OBJECT);
@@ -69,6 +71,9 @@ meta_color_manager_new (MetaBackend *backend)
   cm = g_object_new (META_TYPE_COLOR_MANAGER, NULL);
   cm->backend = backend;
   cm->gl_extn_support = FALSE;
+
+  MetaGLShaders *gl_shaders = meta_gl_shaders_new();
+  cm->gl_shaders = gl_shaders;
 
   return cm;
 }

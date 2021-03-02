@@ -28,6 +28,7 @@
 #include <glib-object.h>
 #include <stdint.h>
 #include <meta/types.h>
+#include <compositor/meta-gl-shaders.h>
 
 #define META_TYPE_COLOR_MANAGER (meta_color_manager_get_type ())
 
