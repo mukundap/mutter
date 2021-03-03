@@ -256,7 +256,7 @@ struct _MetaWaylandSurface
   MetaCrtc *scanout_candidate;
 
   /* color management */
-  struct wl_list cm_surface_resources;;
+  struct wl_list cm_surface_resources;
   uint32_t color_space;
 };
 
