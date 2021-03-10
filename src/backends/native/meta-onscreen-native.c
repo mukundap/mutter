@@ -32,6 +32,7 @@
 #include <drm_fourcc.h>
 
 #include "backends/meta-egl-ext.h"
+#include "backends/meta-color-manager.h"
 #include "backends/native/meta-cogl-utils.h"
 #include "backends/native/meta-crtc-kms.h"
 #include "backends/native/meta-device-pool.h"
@@ -536,6 +537,22 @@ meta_onscreen_native_set_crtc_mode (CoglOnscreen              *onscreen,
 }
 
 static void
+meta_onscreen_native_maybe_needs_csc (CoglOnscreen *onscreen)
+{
+  gboolean needs_csc = FALSE;
+
+  needs_csc = meta_color_manager_maybe_needs_csc ();
+  if (needs_csc)
+    {
+      // Check for display hw based csc
+      if (!meta_color_manager_get_use_glshaders ())
+        {
+          //TODO Display hw: perform crtc colorspace conversion
+        }
+    }
+}
+
+static void
 secondary_gpu_release_dumb (MetaOnscreenNativeSecondaryGpuState *secondary_gpu_state)
 {
   unsigned i;
@@ -1018,6 +1035,9 @@ ensure_crtc_modes (CoglOnscreen *onscreen)
   if (meta_renderer_native_pop_pending_mode_set (renderer_native,
                                                  onscreen_native->view))
     meta_onscreen_native_set_crtc_mode (onscreen, renderer_gpu_data);
+
+  /* check if colorspace conversion needed, should it be per frame? */
+  meta_onscreen_native_maybe_needs_csc (onscreen);
 }
 
 static void
