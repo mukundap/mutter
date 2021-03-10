@@ -70,6 +70,15 @@ gboolean
 meta_crtc_kms_supports_format (MetaCrtcKms *crtc_kms,
                                uint32_t     drm_format);
 
+void meta_crtc_kms_set_degamma (MetaCrtcKms   *crtc_kms,
+                                MetaKmsDevice *kms_device);
+
+void meta_crtc_kms_set_ctm (MetaCrtcKms   *crtc_kms,
+                            MetaKmsDevice *kms_device);
+
+void meta_crtc_kms_set_gamma (MetaCrtcKms   *crtc_kms,
+                              MetaKmsDevice *kms_device);
+
 void meta_crtc_kms_invalidate_gamma (MetaCrtcKms *crtc_kms);
 
 void meta_crtc_kms_maybe_set_gamma (MetaCrtcKms   *crtc_kms,

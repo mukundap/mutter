@@ -201,6 +201,27 @@ generate_crtc_connector_list (MetaGpu  *gpu,
 }
 
 void
+meta_crtc_kms_set_degamma (MetaCrtcKms   *crtc_kms,
+                           MetaKmsDevice *kms_device)
+{
+  // TODO add degamma
+}
+
+void
+meta_crtc_kms_set_ctm (MetaCrtcKms   *crtc_kms,
+                       MetaKmsDevice *kms_device)
+{
+  // TODO add ctm
+}
+
+void
+meta_crtc_kms_set_gamma (MetaCrtcKms   *crtc_kms,
+                         MetaKmsDevice *kms_device)
+{
+  // TODO add ctm
+}
+
+void
 meta_crtc_kms_maybe_set_gamma (MetaCrtcKms   *crtc_kms,
                                MetaKmsDevice *kms_device)
 {

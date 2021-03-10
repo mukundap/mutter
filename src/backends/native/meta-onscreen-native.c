@@ -539,19 +539,43 @@ meta_onscreen_native_set_crtc_mode (CoglOnscreen              *onscreen,
 static void
 meta_onscreen_native_set_crtc_degamma (CoglOnscreen *onscreen)
 {
+  MetaOnscreenNative *onscreen_native = META_ONSCREEN_NATIVE (onscreen);
+  MetaCrtcKms *crtc_kms = META_CRTC_KMS (onscreen_native->crtc);
+  MetaKmsCrtc *kms_crtc = meta_crtc_kms_get_kms_crtc (crtc_kms);
+  MetaKmsDevice *kms_device = meta_kms_crtc_get_device (kms_crtc);
 
+  COGL_TRACE_BEGIN_SCOPED (MetaOnscreenNativeSetCrtcModes,
+                           "Onscreen (set CRTC degamma)");
+
+  meta_crtc_kms_set_degamma (crtc_kms, kms_device);
 }
 
 static void
 meta_onscreen_native_set_crtc_ctm (CoglOnscreen *onscreen)
 {
+  MetaOnscreenNative *onscreen_native = META_ONSCREEN_NATIVE (onscreen);
+  MetaCrtcKms *crtc_kms = META_CRTC_KMS (onscreen_native->crtc);
+  MetaKmsCrtc *kms_crtc = meta_crtc_kms_get_kms_crtc (crtc_kms);
+  MetaKmsDevice *kms_device = meta_kms_crtc_get_device (kms_crtc);
 
+  COGL_TRACE_BEGIN_SCOPED (MetaOnscreenNativeSetCrtcModes,
+                           "Onscreen (set CRTC ctm)");
+
+  meta_crtc_kms_set_ctm (crtc_kms, kms_device);
 }
 
 static void
 meta_onscreen_native_set_crtc_gamma (CoglOnscreen *onscreen)
 {
+  MetaOnscreenNative *onscreen_native = META_ONSCREEN_NATIVE (onscreen);
+  MetaCrtcKms *crtc_kms = META_CRTC_KMS (onscreen_native->crtc);
+  MetaKmsCrtc *kms_crtc = meta_crtc_kms_get_kms_crtc (crtc_kms);
+  MetaKmsDevice *kms_device = meta_kms_crtc_get_device (kms_crtc);
 
+  COGL_TRACE_BEGIN_SCOPED (MetaOnscreenNativeSetCrtcModes,
+                            "Onscreen (set CRTC gamma)");
+
+  meta_crtc_kms_set_gamma (crtc_kms, kms_device);
 }
 
 static void
