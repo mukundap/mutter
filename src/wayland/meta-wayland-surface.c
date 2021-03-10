@@ -491,6 +491,7 @@ meta_wayland_surface_state_set_default (MetaWaylandSurfaceState *state)
   state->has_new_buffer_transform = FALSE;
   state->has_new_viewport_src_rect = FALSE;
   state->has_new_viewport_dst_size = FALSE;
+  state->color_space = META_CS_SRGB;
 
   state->subsurface_placement_ops = NULL;
 
@@ -524,6 +525,7 @@ meta_wayland_surface_state_clear (MetaWaylandSurfaceState *state)
 
   wl_list_for_each_safe (cb, next, &state->frame_callback_list, link)
     wl_resource_destroy (cb->resource);
+  state->color_space = META_CS_UNKNOWN;
 
   if (state->subsurface_placement_ops)
     {
@@ -828,6 +830,8 @@ meta_wayland_surface_apply_state (MetaWaylandSurface      *surface,
 
   surface->offset_x += state->dx;
   surface->offset_y += state->dy;
+
+  surface->color_space = state->color_space;
 
   if (state->opaque_region_set)
     {
@@ -1420,6 +1424,12 @@ meta_wayland_surface_notify_unmapped (MetaWaylandSurface *surface)
 }
 
 static void
+unbind_resource(struct wl_resource *resource)
+{
+  wl_list_remove(wl_resource_get_link(resource));
+}
+
+static void
 wl_surface_destructor (struct wl_resource *resource)
 {
   MetaWaylandSurface *surface = wl_resource_get_user_data (resource);
@@ -1469,6 +1479,13 @@ wl_surface_destructor (struct wl_resource *resource)
   if (surface->wl_subsurface)
     wl_resource_destroy (surface->wl_subsurface);
 
+  struct wl_resource *tmp;
+  wl_resource_for_each_safe(resource, tmp, &surface->cm_surface_resources) {
+    unbind_resource(resource);
+    wl_resource_set_destructor(resource, NULL);
+    wl_resource_set_user_data(resource, NULL);
+  }
+
   g_clear_pointer (&surface->subsurface_branch_node, g_node_destroy);
 
   g_hash_table_destroy (surface->shortcut_inhibited_seats);
@@ -1504,6 +1521,9 @@ meta_wayland_surface_create (MetaWaylandCompositor *compositor,
   surface->shortcut_inhibited_seats = g_hash_table_new (NULL, NULL);
 
   wl_list_init (&surface->presentation_time.feedback_list);
+  wl_list_init(&surface->cm_surface_resources);
+
+  surface->color_space = META_CS_SRGB;
 
   meta_wayland_compositor_notify_surface_id (compositor, id, surface);
 

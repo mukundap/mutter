@@ -17,20 +17,54 @@
  *
  * Authors:
  *   Naveen Kumar <naveen1.kumar@intel.com>
- *   Uday Kiran Pichika <pichika.uday.kiran@intel.com>
  *
  */
 
-#ifndef META_WAYLAND_COLOR_MANAGEMENT_H
-#define META_WAYLAND_COLOR_MANAGEMENT_H
+#ifndef META_COLOR_SPACE_H
+#define META_COLOR_SPACE_H
 
 #include <glib.h>
 #include <glib-object.h>
+#include <stdint.h>
 
-#include "cogl/cogl.h"
 #include "wayland/meta-wayland-types.h"
-#include "meta/meta-color-space.h"
 
-gboolean meta_wayland_color_management_init (MetaWaylandCompositor *compositor);
+typedef struct _MetaVector
+{
+  uint16_t x;
+  uint16_t y;
+} MetaVector;
 
-#endif /* META_WAYLAND_COLOR_MANAGEMENT_H */
+typedef struct _MetaColorPrimaries
+{
+  MetaVector r;
+  MetaVector g;
+  MetaVector b;
+  MetaVector white_point;
+} MetaColorPrimaries;
+
+typedef struct _MetaColorSpace
+{
+  MetaColorPrimaries primaries;
+  const char *name;
+  const char *whitepoint_name;
+} MetaColorSpace;
+
+typedef enum _MetaColorSpaceEnums
+{
+  META_CS_UNKNOWN,
+  META_CS_BT601_525_LINE,
+  META_CS_BT601_625_LINE,
+  META_CS_SMPTE170M,
+  META_CS_BT709,
+  META_CS_BT2020,
+  META_CS_SRGB,
+  META_CS_DISPLAYP3,
+  META_CS_ADOBERGB
+} MetaColorSpaceEnums;
+
+const struct MetaColorSpace *
+meta_color_space_lookup(MetaColorSpaceEnums color_space);
+
+
+#endif /* META_COLOR_SPACE_H */

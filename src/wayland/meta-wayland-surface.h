@@ -32,6 +32,7 @@
 #include "meta/meta-cursor-tracker.h"
 #include "wayland/meta-wayland-pointer-constraints.h"
 #include "wayland/meta-wayland-types.h"
+#include "meta/meta-color-space.h"
 
 #define META_TYPE_WAYLAND_SURFACE (meta_wayland_surface_get_type ())
 G_DECLARE_FINAL_TYPE (MetaWaylandSurface,
@@ -125,6 +126,9 @@ struct _MetaWaylandSurfaceState
 
   /* presentation-time */
   struct wl_list presentation_feedback_list;
+
+  /* color management */
+  uint32_t color_space;
 };
 
 struct _MetaWaylandDragDestFuncs
@@ -250,6 +254,10 @@ struct _MetaWaylandSurface
 
   /* dma-buf feedback */
   MetaCrtc *scanout_candidate;
+
+  /* color management */
+  struct wl_list cm_surface_resources;;
+  uint32_t color_space;
 };
 
 void                meta_wayland_shell_init     (MetaWaylandCompositor *compositor);
