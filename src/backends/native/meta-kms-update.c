@@ -38,6 +38,8 @@ struct _MetaKmsUpdate
   GList *mode_sets;
   GList *plane_assignments;
   GList *connector_updates;
+  GList *crtc_degammas;
+  GList *crtc_ctms;
   GList *crtc_gammas;
 
   MetaKmsCustomPageFlip *custom_page_flip;
@@ -373,6 +375,30 @@ meta_kms_update_set_privacy_screen (MetaKmsUpdate    *update,
 }
 
 void
+meta_kms_update_set_crtc_degamma (MetaKmsUpdate  *update,
+                                  MetaKmsCrtc    *crtc,
+                                  int             size,
+                                  const uint16_t *red,
+                                  const uint16_t *green,
+                                  const uint16_t *blue)
+{
+  meta_verbose ("\nTRACE: File: %s, Function: %s \n", __FILE__, __FUNCTION__);
+  // TODO: prepare degamma & update the list
+  // update->crtc_degammas = g_list_prepend (update->crtc_degammas, degamma);
+}
+
+void
+meta_kms_update_set_crtc_ctm (MetaKmsUpdate  *update,
+                              MetaKmsCrtc    *crtc,
+                              int size,
+                              const uint64_t *matrix)
+{
+  meta_verbose ("\nTRACE: File: %s, Function: %s \n", __FILE__, __FUNCTION__);
+  // TODO: prepare ctm & update the list
+  // update->crtc_ctms = g_list_prepend (update->crtc_ctms, ctm);
+}
+
+void
 meta_kms_crtc_gamma_free (MetaKmsCrtcGamma *gamma)
 {
   g_free (gamma->red);
@@ -649,6 +675,18 @@ GList *
 meta_kms_update_get_connector_updates (MetaKmsUpdate *update)
 {
   return update->connector_updates;
+}
+
+GList *
+meta_kms_update_get_crtc_degammas (MetaKmsUpdate *update)
+{
+  return update->crtc_degammas;
+}
+
+GList *
+meta_kms_update_get_crtc_ctms (MetaKmsUpdate *update)
+{
+  return update->crtc_ctms;
 }
 
 GList *
