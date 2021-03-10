@@ -46,7 +46,7 @@
 #include "core/boxes-private.h"
 #include "meta/meta-shaped-texture.h"
 #include "compositor/meta-gl-shaders.h"
-#include "meta/meta-color-management.h"
+#include "meta/meta-color-space.h"
 
 /* MAX_MIPMAPPING_FPS needs to be as small as possible for the best GPU
  * performance, but higher than the refresh rate of commonly slow updating

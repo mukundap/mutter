@@ -42,7 +42,7 @@
 #include "backends/meta-color-manager.h"
 #include "backends/meta-output.h"
 #include "meta/util.h"
-#include "meta/meta-color-management.h"
+#include "meta/meta-color-space.h"
 
 typedef struct _MetaColorManager
 {
@@ -131,7 +131,7 @@ meta_color_manager_get_use_glshaders(void)
 }
 
 gboolean
-meta_color_manager_maybe_needs_csc()
+meta_color_manager_maybe_needs_csc(void)
 {
   MetaColorManager *color_manager =
          meta_backend_get_color_manager (meta_get_backend ());
@@ -152,12 +152,12 @@ meta_color_manager_get_colorspaces(uint32_t *client_colorspace,
 uint16_t
 meta_color_manager_map_targetCS_to_clientCS(uint16_t target_colorspace)
 {
-  if((target_colorspace && META_COLORSPACE_TYPE_BT2020RGB) ||
-    (target_colorspace && META_COLORSPACE_TYPE_BT2020YCC))
+  if((target_colorspace & META_COLORSPACE_TYPE_BT2020RGB) ||
+    (target_colorspace & META_COLORSPACE_TYPE_BT2020YCC))
     {
       return META_CS_BT2020;
     }
-  else if(target_colorspace && META_COLORSPACE_TYPE_xvYCC709)
+  else if(target_colorspace & META_COLORSPACE_TYPE_xvYCC709)
     {
       return META_CS_BT709;
     }
