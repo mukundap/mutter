@@ -271,6 +271,33 @@ meta_kms_crtc_read_state (MetaKmsCrtc             *crtc,
                 ? "no"
                 : "yes");
 
+  // read colorspace properties
+  active_prop = &crtc->prop_table.props[META_KMS_CRTC_PROP_GAMMA_LUT_SIZE];
+  if (active_prop->prop_id)
+    {
+      active_idx = find_prop_idx (active_prop,
+                                  drm_props->props,
+                                  drm_props->count_props);
+      crtc->current_state.gamma.size = drm_props->prop_values[active_idx];
+    }
+  else
+    {
+      crtc->current_state.gamma.size = drm_crtc->gamma_size;
+    }
+
+  active_prop = &crtc->prop_table.props[META_KMS_CRTC_PROP_DEGAMMA_LUT_SIZE];
+  if (active_prop->prop_id)
+    {
+      active_idx = find_prop_idx (active_prop,
+                                  drm_props->props,
+                                  drm_props->count_props);
+      crtc->current_state.degamma.size = drm_props->prop_values[active_idx];
+    }
+  else
+    {
+      crtc->current_state.degamma.size = drm_crtc->gamma_size;
+    }
+
   return changes;
 }
 
@@ -417,6 +444,26 @@ init_proporties (MetaKmsCrtc       *crtc,
         {
           .name = "GAMMA_LUT",
           .type = DRM_MODE_PROP_BLOB,
+        },
+      [META_KMS_CRTC_PROP_GAMMA_LUT_SIZE] =
+        {
+          .name = "GAMMA_LUT_SIZE",
+          .type = DRM_MODE_PROP_RANGE,
+        },
+      [META_KMS_CRTC_PROP_CTM] =
+        {
+          .name = "CTM",
+          .type = DRM_MODE_PROP_BLOB,
+        },
+      [META_KMS_CRTC_PROP_DEGAMMA_LUT] =
+        {
+          .name = "DEGAMMA_LUT",
+          .type = DRM_MODE_PROP_BLOB,
+        },
+      [META_KMS_CRTC_PROP_DEGAMMA_LUT_SIZE] =
+        {
+          .name = "DEGAMMA_LUT_SIZE",
+          .type = DRM_MODE_PROP_RANGE,
         },
     }
   };
