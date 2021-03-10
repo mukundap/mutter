@@ -607,6 +607,32 @@ process_plane_assignment (MetaKmsImplDevice  *impl_device,
 }
 
 static gboolean
+process_crtc_degamma (MetaKmsImplDevice  *impl_device,
+                      MetaKmsUpdate      *update,
+                      drmModeAtomicReq   *req,
+                      GArray             *blob_ids,
+                      gpointer            update_entry,
+                      gpointer            user_data,
+                      GError            **error)
+{
+  //TODO: Add degamma
+  return TRUE;
+}
+
+static gboolean
+process_crtc_ctm (MetaKmsImplDevice  *impl_device,
+                  MetaKmsUpdate      *update,
+                  drmModeAtomicReq   *req,
+                  GArray             *blob_ids,
+                  gpointer            update_entry,
+                  gpointer            user_data,
+                  GError            **error)
+{
+  //TODO: Add ctm: color transform matrix
+  return TRUE;
+}
+
+static gboolean
 process_crtc_gamma (MetaKmsImplDevice  *impl_device,
                     MetaKmsUpdate      *update,
                     drmModeAtomicReq   *req,
@@ -982,6 +1008,26 @@ meta_kms_impl_device_atomic_process_update (MetaKmsImplDevice *impl_device,
                         meta_kms_update_get_plane_assignments (update),
                         NULL,
                         process_plane_assignment,
+                        &error))
+    goto err;
+
+  if (!process_entries (impl_device,
+                        update,
+                        req,
+                        blob_ids,
+                        meta_kms_update_get_crtc_degammas (update),
+                        NULL,
+                        process_crtc_degamma,
+                        &error))
+    goto err;
+
+  if (!process_entries (impl_device,
+                        update,
+                        req,
+                        blob_ids,
+                        meta_kms_update_get_crtc_ctms (update),
+                        NULL,
+                        process_crtc_ctm,
                         &error))
     goto err;
 
