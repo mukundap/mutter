@@ -92,6 +92,36 @@ meta_kms_crtc_is_active (MetaKmsCrtc *crtc)
   return crtc->current_state.is_active;
 }
 
+MetaKmsCrtcDegamma *
+meta_kms_crtc_get_degamma (MetaKmsCrtc *crtc)
+{
+  MetaKmsCrtcDegamma *degamma;
+
+  // TODO: fetch Degamma lut size & generate degamma lut values
+
+  return degamma;
+}
+
+MetaKmsCrtcCtm *
+meta_kms_crtc_get_ctm (MetaKmsCrtc *crtc)
+{
+  MetaKmsCrtcCtm *ctm;
+
+  // TODO: generate CTM matrix values
+
+  return ctm;
+}
+
+MetaKmsCrtcGamma *
+meta_kms_crtc_get_gamma (MetaKmsCrtc *crtc)
+{
+  MetaKmsCrtcGamma *gamma;
+
+  // TODO: fetch Gamma lut size & generate gamma lut values
+
+  return gamma;
+}
+
 static void
 read_gamma_state (MetaKmsCrtc       *crtc,
                   MetaKmsCrtcState  *crtc_state,

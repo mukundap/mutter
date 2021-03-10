@@ -204,21 +204,64 @@ void
 meta_crtc_kms_set_degamma (MetaCrtcKms   *crtc_kms,
                            MetaKmsDevice *kms_device)
 {
-  // TODO add degamma
+  MetaKms *kms = meta_kms_device_get_kms (kms_device);
+  MetaKmsUpdate *kms_update;
+  MetaKmsCrtcDegamma *degamma;
+
+  degamma = meta_kms_crtc_get_degamma (meta_crtc_kms_get_kms_crtc (crtc_kms));
+
+  if (!degamma)
+    return;
+
+  kms_update = meta_kms_ensure_pending_update (kms, kms_device);
+  meta_kms_update_set_crtc_degamma (kms_update,
+                                    meta_crtc_kms_get_kms_crtc (crtc_kms),
+                                    degamma->size,
+                                    degamma->red,
+                                    degamma->green,
+                                    degamma->blue);
 }
 
 void
 meta_crtc_kms_set_ctm (MetaCrtcKms   *crtc_kms,
                        MetaKmsDevice *kms_device)
 {
-  // TODO add ctm
+  MetaKms *kms = meta_kms_device_get_kms (kms_device);
+  MetaKmsUpdate *kms_update;
+  MetaKmsCrtcCtm *ctm;
+
+  ctm = meta_kms_crtc_get_ctm (meta_crtc_kms_get_kms_crtc (crtc_kms));
+
+  if (!ctm)
+    return;
+
+  kms_update = meta_kms_ensure_pending_update (kms, kms_device);
+  meta_kms_update_set_crtc_ctm (kms_update,
+                                meta_crtc_kms_get_kms_crtc (crtc_kms),
+                                ctm->size,
+                                ctm->matrix);
 }
 
 void
 meta_crtc_kms_set_gamma (MetaCrtcKms   *crtc_kms,
                          MetaKmsDevice *kms_device)
 {
-  // TODO add ctm
+  MetaKms *kms = meta_kms_device_get_kms (kms_device);
+  MetaKmsUpdate *kms_update;
+  MetaKmsCrtcGamma *gamma;
+
+  gamma = meta_kms_crtc_get_gamma (meta_crtc_kms_get_kms_crtc (crtc_kms));
+
+  if (!gamma)
+    return;
+
+  kms_update = meta_kms_ensure_pending_update (kms, kms_device);
+  meta_kms_update_set_crtc_gamma (kms_update,
+                                  meta_crtc_kms_get_kms_crtc (crtc_kms),
+                                  gamma->size,
+                                  gamma->red,
+                                  gamma->green,
+                                  gamma->blue);
 }
 
 void
