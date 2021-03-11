@@ -115,7 +115,37 @@ meta_kms_crtc_get_ctm (MetaKmsCrtc *crtc)
 {
   MetaKmsCrtcCtm *ctm;
 
-  // TODO: generate CTM matrix values
+  // CTM size is fixed globally
+  uint32_t ctm_size = 9;
+  ctm = g_malloc0 (ctm_size * sizeof (MetaKmsCrtcCtm *));
+  ctm->matrix = g_malloc0 (ctm_size * sizeof (uint64_t *));
+  ctm->size = ctm_size;
+
+  ColorSpace bt709, bt2020;
+
+  bt2020.white.x = 0.3127;
+  bt2020.white.y = 0.3290;
+  bt2020.white.luminance = 100.0;
+
+  bt2020.red.x = 0.708;
+  bt2020.red.y = 0.292;
+  bt2020.green.x = 0.170;
+  bt2020.green.y = 0.797;
+  bt2020.blue.x = 0.131;
+  bt2020.blue.y = 0.046;
+
+  bt709.white.x = 0.3127;
+  bt709.white.y = 0.3290;
+  bt709.white.luminance = 100.0;
+
+  bt709.red.x = 0.64;
+  bt709.red.y = 0.33;
+  bt709.green.x = 0.30;
+  bt709.green.y = 0.60;
+  bt709.blue.x = 0.15;
+  bt709.blue.y = 0.06;
+
+  GetCTMForSrcToDestColorSpace (bt709, bt2020, ctm);
 
   return ctm;
 }

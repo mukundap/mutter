@@ -71,7 +71,7 @@ typedef struct _MetaKmsCrtcCtm
 {
   MetaKmsCrtc *crtc;
   int size;
-  uint64_t matrix[9];
+  uint64_t *matrix;;
 } MetaKmsCrtcCtm;
 
 typedef struct _MetaKmsCrtcGamma
