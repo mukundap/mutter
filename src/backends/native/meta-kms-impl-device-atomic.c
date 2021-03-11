@@ -615,7 +615,40 @@ process_crtc_degamma (MetaKmsImplDevice  *impl_device,
                       gpointer            user_data,
                       GError            **error)
 {
-  //TODO: Add degamma
+  MetaKmsCrtcDegamma *degamma = update_entry;
+  MetaKmsCrtc *crtc = degamma->crtc;
+  struct drm_color_lut drm_color_lut[degamma->size];
+  int i;
+  uint32_t color_lut_blob_id;
+
+  for (i = 0; i < degamma->size; i++)
+    {
+      drm_color_lut[i].red = degamma->red[i];
+      drm_color_lut[i].green = degamma->green[i];
+      drm_color_lut[i].blue = degamma->blue[i];
+    }
+
+  color_lut_blob_id = store_new_blob (impl_device,
+                                      blob_ids,
+                                      drm_color_lut,
+                                      sizeof drm_color_lut,
+                                      error);
+  if (!color_lut_blob_id)
+    return FALSE;
+
+  meta_topic (META_DEBUG_KMS,
+              "[atomic] Setting CRTC (%u, %s) degamma, size: %d",
+              meta_kms_crtc_get_id (crtc),
+              meta_kms_impl_device_get_path (impl_device),
+              degamma->size);
+
+  if (!add_crtc_property (impl_device,
+                          crtc, req,
+                          META_KMS_CRTC_PROP_DEGAMMA_LUT,
+                          color_lut_blob_id,
+                          error))
+    return FALSE;
+
   return TRUE;
 }
 
@@ -628,7 +661,38 @@ process_crtc_ctm (MetaKmsImplDevice  *impl_device,
                   gpointer            user_data,
                   GError            **error)
 {
-  //TODO: Add ctm: color transform matrix
+  MetaKmsCrtcCtm *ctm = update_entry;
+  MetaKmsCrtc *crtc = ctm->crtc;
+  struct drm_color_ctm drm_color_ctm;
+  int i;
+  uint32_t color_ctm_blob_id;
+
+  for (i = 0; i < ctm->size; i++)
+    {
+      drm_color_ctm.matrix[i] = ctm->matrix[i];
+    }
+
+  color_ctm_blob_id = store_new_blob (impl_device,
+                                      blob_ids,
+                                      &drm_color_ctm,
+                                      sizeof drm_color_ctm,
+                                      error);
+  if (!color_ctm_blob_id)
+    return FALSE;
+
+  meta_topic (META_DEBUG_KMS,
+              "[atomic] Setting CRTC (%u, %s) ctm, size: %d",
+              meta_kms_crtc_get_id (crtc),
+              meta_kms_impl_device_get_path (impl_device),
+              ctm->size);
+
+  if (!add_crtc_property (impl_device,
+                          crtc, req,
+                          META_KMS_CRTC_PROP_CTM,
+                          color_ctm_blob_id,
+                          error))
+    return FALSE;
+
   return TRUE;
 }
 
