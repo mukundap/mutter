@@ -28,7 +28,7 @@ typedef struct{
         double *pLutData;
 }OneDLUT;
 
-extern void create_unity_log_lut(uint32_t NumOfSegments, uint32_t *NumEntriesPerSegment, uint32_t *pOutputLut);
+extern void create_unity_log_lut(segment_data_t *info, MetaKmsCrtcGamma *gamma);
 extern void GetCTMForSrcToDestColorSpace(ColorSpace srcColorSpace, ColorSpace destColorSpace, MetaKmsCrtcCtm *ctm);
 extern void GenerateSrgbDegammaLut(MetaKmsCrtcDegamma *degamma);
 extern void GenerateSrgbGammaLut(MetaKmsCrtcGamma *gamma);

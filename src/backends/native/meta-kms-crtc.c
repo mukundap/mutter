@@ -163,7 +163,16 @@ meta_kms_crtc_get_gamma (MetaKmsCrtc *crtc)
   gamma->blue = g_malloc0 (gamma_lut_size * sizeof (uint16_t *));
   gamma->size = gamma_lut_size;
 
-  GenerateSrgbGammaLut (gamma);
+  if (crtc->current_state.gamma_mode_type == META_KMS_CRTC_GAMMA_MODE_LOGARITHMIC)
+    {
+      // set_advance_gamma
+      create_unity_log_lut (crtc->current_state.segment_info, gamma);
+    }
+  else
+    {
+      // set_gamma
+      GenerateSrgbGammaLut (gamma);
+    }
 
   return gamma;
 }
@@ -464,6 +473,32 @@ parse_active (MetaKmsImplDevice  *impl_device,
   crtc->current_state.is_active = !!drm_prop_value;
 }
 
+static segment_data_t *
+get_segment_data (int fd,
+                  uint64_t blob_id, char *mode)
+{
+  drmModePropertyBlobPtr blob;
+  struct drm_color_lut_range *lut_range = NULL;
+  segment_data_t *info = NULL;
+
+  blob = drmModeGetPropertyBlob (fd, blob_id);
+
+  info = malloc (sizeof (segment_data_t));
+
+  lut_range = (struct drm_color_lut_range *) blob->data;
+  info->segment_count = blob->length / sizeof(lut_range[0]);
+  info->segment_data = malloc (sizeof (struct drm_color_lut_range) * info->segment_count);
+  info->entries_count = 0;
+  for (uint32_t i = 0; i < info->segment_count; i++) {
+    info->entries_count += lut_range[i].count;
+    info->segment_data[i] = lut_range[i];
+  }
+
+  drmModeFreePropertyBlob (blob);
+
+  return info;
+}
+
 static void
 parse_gamma_mode (MetaKmsImplDevice  *impl_device,
                   MetaKmsProp        *prop,
@@ -472,12 +507,19 @@ parse_gamma_mode (MetaKmsImplDevice  *impl_device,
                   gpointer            user_data)
 {
   MetaKmsCrtc *crtc = user_data;
+  int fd;
+  fd = meta_kms_impl_device_get_fd (impl_device);
 
   for (int i = 0; i < drm_prop->count_enums; i++)
     {
       if (strcmp (drm_prop->enums[i].name, "logarithmic gamma") == 0)
       {
-        crtc->current_state.gamma_mode = META_KMS_CRTC_GAMMA_MODE_LOGARITHMIC;
+        crtc->current_state.gamma_mode_type =
+                        META_KMS_CRTC_GAMMA_MODE_LOGARITHMIC;
+        crtc->current_state.gamma_mode_value = drm_prop->enums[i].value;
+
+        crtc->current_state.segment_info = get_segment_data (fd,
+                        drm_prop->enums[i].value, drm_prop->enums[i].name);
         break;
       }
     }

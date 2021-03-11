@@ -12,29 +12,36 @@ double c3 = 18.6875;
 #define DD_MIN(a, b) ((a) < (b) ? (a) : (b))
 #define DD_MAX(a, b) ((a) < (b) ? (b) : (a))
 #define MAX_24BIT_NUM ((1<<24) -1)
-void create_unity_log_lut(uint32_t NumOfSegments, uint32_t *NumEntriesPerSegment, uint32_t *pOutputLut)
+
+void create_unity_log_lut(segment_data_t *info, MetaKmsCrtcGamma *gamma)
 {
-	uint32_t temp, index = 0;
-	pOutputLut[index++] = 0;
-	for (int segment=0; segment < NumOfSegments; segment++)
-	{
-	        uint32_t entry_count = NumEntriesPerSegment[segment];
-	        uint32_t start = (1 << (segment - 1));
-	        uint32_t end = (1 << segment);
-	        for (uint32_t entry = 1; entry <= entry_count; entry++)
-	        {
-	                temp = start + entry * ((end - start) * 1.0 / entry_count);
-	                pOutputLut[index] = DD_MIN(temp, MAX_24BIT_NUM);
-	                index++;
-	        }
-	}
-	g_warning("Sameer: Linear LUTs:\n");
-	meta_topic(META_DEBUG_KMS, "Sameer: Linear LUTs:\n");
-        for (int i=0; i<513; i++)
-        {
-                meta_topic(META_DEBUG_KMS, "%d, ", pOutputLut[i]);
-        }
-        meta_topic(META_DEBUG_KMS, "ALL LUTS OK?\n");
+  uint32_t temp, index = 0;
+  double scaling_factor;
+  uint32_t max_hw_value = (1 << 16) - 1;
+  unsigned int max_segment_value = 1 << 24;
+
+  gamma->green[index] = gamma->blue[index] = gamma->red[index] = 0;
+  for (int segment=0; segment < info->segment_count; segment++)
+  {
+    uint32_t entry_count = info->segment_data[segment].count;
+    uint32_t start = (1 << (segment - 1));
+    uint32_t end = (1 << segment);
+    for (uint32_t entry = 1; entry <= entry_count; entry++)
+    {
+      index++;
+      scaling_factor = (double)max_hw_value / (double)max_segment_value;
+      temp = start + entry * ((end - start) * 1.0 / entry_count);
+
+      gamma->red[index] = (double)temp * (double)scaling_factor;
+      gamma->red[index] = DD_MIN(gamma->red[index], max_hw_value);
+      gamma->green[index] = gamma->blue[index] = gamma->red[index];
+    }
+  }
+  meta_topic(META_DEBUG_KMS, "Linear LUTs:\n");
+  for (int i=0; i<513; i++)
+  {
+    meta_topic(META_DEBUG_KMS, "gamma->red[%d] = %d, ", i, gamma->red[i]);
+  }
 }
 
 double MatrixDeterminant3x3(double matrix[3][3])

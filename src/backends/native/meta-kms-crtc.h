@@ -34,6 +34,12 @@ typedef enum _MetaKmsCrtcGammaMode
   META_KMS_CRTC_GAMMA_MODE_LOGARITHMIC,
 } MetaKmsCrtcGammaMode;
 
+typedef struct {
+  uint32_t segment_count;
+  struct drm_color_lut_range *segment_data;
+  uint32_t entries_count;
+} segment_data_t;
+
 typedef struct _MetaKmsCrtcState
 {
   gboolean is_active;
@@ -41,7 +47,9 @@ typedef struct _MetaKmsCrtcState
   MetaRectangle rect;
   gboolean is_drm_mode_valid;
   drmModeModeInfo drm_mode;
-  MetaKmsCrtcGammaMode gamma_mode;
+  MetaKmsCrtcGammaMode gamma_mode_type;
+  int gamma_mode_value;
+  segment_data_t *segment_info;
 
   struct {
     uint16_t *red;

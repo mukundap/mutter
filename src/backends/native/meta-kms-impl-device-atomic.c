@@ -707,6 +707,7 @@ process_crtc_gamma (MetaKmsImplDevice  *impl_device,
 {
   MetaKmsCrtcGamma *gamma = update_entry;
   MetaKmsCrtc *crtc = gamma->crtc;
+  const MetaKmsCrtcState *crtc_state = meta_kms_crtc_get_current_state (crtc);
   struct drm_color_lut drm_color_lut[gamma->size];
   int i;
   uint32_t color_lut_blob_id;
@@ -725,6 +726,22 @@ process_crtc_gamma (MetaKmsImplDevice  *impl_device,
                                       error);
   if (!color_lut_blob_id)
     return FALSE;
+
+  if (crtc_state->gamma_mode_type == META_KMS_CRTC_GAMMA_MODE_LOGARITHMIC)
+    {
+      meta_topic (META_DEBUG_KMS,
+                  "[atomic] Setting CRTC (%u, %s) gamma mode: %s",
+                  meta_kms_crtc_get_id (crtc),
+                  meta_kms_impl_device_get_path (impl_device),
+                  "logarithmic gamma");
+
+      if (!add_crtc_property (impl_device,
+                              crtc, req,
+                              META_KMS_CRTC_PROP_GAMMA_MODE,
+                              crtc_state->gamma_mode_value,
+                              error))
+        return FALSE;
+    }
 
   meta_topic (META_DEBUG_KMS,
               "[atomic] Setting CRTC (%u, %s) gamma, size: %d",
