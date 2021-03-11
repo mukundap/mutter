@@ -105,7 +105,21 @@ gboolean meta_kms_crtc_is_active (MetaKmsCrtc *crtc);
 
 MetaKmsCrtcDegamma * meta_kms_crtc_get_degamma (MetaKmsCrtc *crtc);
 
+void meta_kms_crtc_degamma_free (MetaKmsCrtcDegamma *degamma);
+
+MetaKmsCrtcDegamma * meta_kms_crtc_degamma_new (MetaKmsCrtc    *crtc,
+                                                int             size,
+                                                const uint16_t *red,
+                                                const uint16_t *green,
+                                                const uint16_t *blue);
+
 MetaKmsCrtcCtm * meta_kms_crtc_get_ctm (MetaKmsCrtc *crtc);
+
+void meta_kms_crtc_ctm_free (MetaKmsCrtcCtm *ctm);
+
+MetaKmsCrtcCtm * meta_kms_crtc_ctm_new (MetaKmsCrtc    *crtc,
+                                        int             size,
+                                        const uint64_t *matrix);
 
 MetaKmsCrtcGamma * meta_kms_crtc_get_gamma (MetaKmsCrtc *crtc);
 
