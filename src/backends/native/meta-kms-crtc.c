@@ -124,8 +124,16 @@ MetaKmsCrtcGamma *
 meta_kms_crtc_get_gamma (MetaKmsCrtc *crtc)
 {
   MetaKmsCrtcGamma *gamma;
+  int gamma_lut_size = crtc->current_state.gamma.size;
+  gamma_lut_size = 513;
 
-  // TODO: fetch Gamma lut size & generate gamma lut values
+  gamma = g_malloc0 (gamma_lut_size * sizeof (MetaKmsCrtcGamma *));
+  gamma->red = g_malloc0 (gamma_lut_size * sizeof (uint16_t *));
+  gamma->green = g_malloc0 (gamma_lut_size * sizeof (uint16_t *));
+  gamma->blue = g_malloc0 (gamma_lut_size * sizeof (uint16_t *));
+  gamma->size = gamma_lut_size;
+
+  GenerateSrgbGammaLut (gamma);
 
   return gamma;
 }

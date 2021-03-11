@@ -317,12 +317,19 @@ double GetSRGBEncodingValue(double input)
                output = (1.055 * pow(input,1.0/2.4)) - 0.055;
        return output;
 }
-void GenerateSrgbGammaLut(OneDLUT *lut)
+
+void GenerateSrgbGammaLut(MetaKmsCrtcGamma *gamma)
 {
-       for(int i=0; i<lut->nSamples; i++)
-       {
-                lut->pLutData[i]= (double) i / (double)(lut->nSamples -1);
-                lut->pLutData[i]= GetSRGBEncodingValue(lut->pLutData[i]);
-       }
+  uint32_t max_val = (1 << 16) - 1;
+  for (int i=0; i<gamma->size; i++)
+  {
+    double normalized_input = (double)i / (double)(gamma->size - 1);
+    gamma->red[i] = (double)max_val * GetSRGBEncodingValue(normalized_input)
+                      + 0.5;
+
+    if (gamma->red[i] > max_val)
+      gamma->red[i] = max_val;
+    gamma->green[i] = gamma->blue[i] = gamma->red[i];
+  }
 }
 
