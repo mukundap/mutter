@@ -4,6 +4,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <math.h>
+#include "backends/native/meta-kms-crtc.h"
 
 typedef struct
 {
@@ -29,4 +30,5 @@ typedef struct{
 
 extern void create_unity_log_lut(uint32_t NumOfSegments, uint32_t *NumEntriesPerSegment, uint32_t *pOutputLut);
 extern void GetCTMForSrcToDestColorSpace(ColorSpace src, ColorSpace dst, double ctmResult[3][3]);
+extern void GenerateSrgbDegammaLut(MetaKmsCrtcDegamma *degamma);
 #endif //End of META_KMS_COLOR_UTILITY_H

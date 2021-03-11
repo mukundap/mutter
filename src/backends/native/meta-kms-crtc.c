@@ -26,6 +26,7 @@
 #include "backends/native/meta-kms-impl-device.h"
 #include "backends/native/meta-kms-mode.h"
 #include "backends/native/meta-kms-update-private.h"
+#include "backends/native/meta-kms-color-utility.h"
 
 typedef struct _MetaKmsCrtcPropTable
 {
@@ -96,8 +97,15 @@ MetaKmsCrtcDegamma *
 meta_kms_crtc_get_degamma (MetaKmsCrtc *crtc)
 {
   MetaKmsCrtcDegamma *degamma;
+  int degamma_lut_size = crtc->current_state.degamma.size;
 
-  // TODO: fetch Degamma lut size & generate degamma lut values
+  degamma = g_malloc0 (degamma_lut_size * sizeof (MetaKmsCrtcDegamma *));
+  degamma->red = g_malloc0 (degamma_lut_size * sizeof (uint16_t *));
+  degamma->green = g_malloc0 (degamma_lut_size * sizeof (uint16_t *));
+  degamma->blue = g_malloc0 (degamma_lut_size * sizeof (uint16_t *));
+  degamma->size = degamma_lut_size;
+
+  GenerateSrgbDegammaLut (degamma);
 
   return degamma;
 }
