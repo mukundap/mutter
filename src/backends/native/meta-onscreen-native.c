@@ -551,7 +551,9 @@ meta_onscreen_native_set_crtc_degamma (CoglOnscreen *onscreen)
 }
 
 static void
-meta_onscreen_native_set_crtc_ctm (CoglOnscreen *onscreen)
+meta_onscreen_native_set_crtc_ctm (CoglOnscreen *onscreen,
+                                   uint32_t src_cs,
+                                   uint16_t dst_cs)
 {
   MetaOnscreenNative *onscreen_native = META_ONSCREEN_NATIVE (onscreen);
   MetaCrtcKms *crtc_kms = META_CRTC_KMS (onscreen_native->crtc);
@@ -561,7 +563,7 @@ meta_onscreen_native_set_crtc_ctm (CoglOnscreen *onscreen)
   COGL_TRACE_BEGIN_SCOPED (MetaOnscreenNativeSetCrtcModes,
                            "Onscreen (set CRTC ctm)");
 
-  meta_crtc_kms_set_ctm (crtc_kms, kms_device);
+  meta_crtc_kms_set_ctm (crtc_kms, kms_device, src_cs, dst_cs);
 }
 
 static void
@@ -582,6 +584,10 @@ static void
 meta_onscreen_native_maybe_needs_csc (CoglOnscreen *onscreen)
 {
   gboolean needs_csc = FALSE;
+  uint32_t src_cs;
+  uint16_t dst_cs;
+
+  meta_color_manager_get_colorspaces (&src_cs, &dst_cs);
 
   needs_csc = meta_color_manager_maybe_needs_csc ();
   if (needs_csc)
@@ -594,7 +600,7 @@ meta_onscreen_native_maybe_needs_csc (CoglOnscreen *onscreen)
           meta_onscreen_native_set_crtc_degamma (onscreen);
 
           /* CTM: color transform matrix for color gamut mapping */
-          meta_onscreen_native_set_crtc_ctm (onscreen);
+          meta_onscreen_native_set_crtc_ctm (onscreen, src_cs, dst_cs);
 
           /* Gamma for non-linearization */
           meta_onscreen_native_set_crtc_gamma (onscreen);

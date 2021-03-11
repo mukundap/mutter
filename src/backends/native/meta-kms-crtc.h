@@ -128,7 +128,9 @@ MetaKmsCrtcDegamma * meta_kms_crtc_degamma_new (MetaKmsCrtc    *crtc,
                                                 const uint16_t *green,
                                                 const uint16_t *blue);
 
-MetaKmsCrtcCtm * meta_kms_crtc_get_ctm (MetaKmsCrtc *crtc);
+MetaKmsCrtcCtm * meta_kms_crtc_get_ctm (MetaKmsCrtc *crtc,
+                                        uint32_t src_cs,
+                                        uint16_t dst_cs);
 
 void meta_kms_crtc_ctm_free (MetaKmsCrtcCtm *ctm);
 

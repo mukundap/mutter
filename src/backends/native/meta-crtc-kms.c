@@ -224,13 +224,16 @@ meta_crtc_kms_set_degamma (MetaCrtcKms   *crtc_kms,
 
 void
 meta_crtc_kms_set_ctm (MetaCrtcKms   *crtc_kms,
-                       MetaKmsDevice *kms_device)
+                       MetaKmsDevice *kms_device,
+                       uint32_t src_cs,
+                       uint16_t dst_cs)
 {
   MetaKms *kms = meta_kms_device_get_kms (kms_device);
   MetaKmsUpdate *kms_update;
   MetaKmsCrtcCtm *ctm;
 
-  ctm = meta_kms_crtc_get_ctm (meta_crtc_kms_get_kms_crtc (crtc_kms));
+  ctm = meta_kms_crtc_get_ctm (meta_crtc_kms_get_kms_crtc (crtc_kms),
+                               src_cs, dst_cs);
 
   if (!ctm)
     return;

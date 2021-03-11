@@ -74,7 +74,9 @@ void meta_crtc_kms_set_degamma (MetaCrtcKms   *crtc_kms,
                                 MetaKmsDevice *kms_device);
 
 void meta_crtc_kms_set_ctm (MetaCrtcKms   *crtc_kms,
-                            MetaKmsDevice *kms_device);
+                            MetaKmsDevice *kms_device,
+                            uint32_t src_cs,
+                            uint16_t dst_cs);
 
 void meta_crtc_kms_set_gamma (MetaCrtcKms   *crtc_kms,
                               MetaKmsDevice *kms_device);

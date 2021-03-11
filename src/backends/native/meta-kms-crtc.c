@@ -27,6 +27,7 @@
 #include "backends/native/meta-kms-mode.h"
 #include "backends/native/meta-kms-update-private.h"
 #include "backends/native/meta-kms-color-utility.h"
+#include "meta/meta-color-space.h"
 
 typedef struct _MetaKmsCrtcPropTable
 {
@@ -111,7 +112,9 @@ meta_kms_crtc_get_degamma (MetaKmsCrtc *crtc)
 }
 
 MetaKmsCrtcCtm *
-meta_kms_crtc_get_ctm (MetaKmsCrtc *crtc)
+meta_kms_crtc_get_ctm (MetaKmsCrtc *crtc,
+                       uint32_t src_cs,
+                       uint16_t dst_cs)
 {
   MetaKmsCrtcCtm *ctm;
 
@@ -121,6 +124,7 @@ meta_kms_crtc_get_ctm (MetaKmsCrtc *crtc)
   ctm->matrix = g_malloc0 (ctm_size * sizeof (uint64_t *));
   ctm->size = ctm_size;
 
+  ColorSpace src, dst;
   ColorSpace bt709, bt2020;
 
   bt2020.white.x = 0.3127;
@@ -145,7 +149,21 @@ meta_kms_crtc_get_ctm (MetaKmsCrtc *crtc)
   bt709.blue.x = 0.15;
   bt709.blue.y = 0.06;
 
-  GetCTMForSrcToDestColorSpace (bt709, bt2020, ctm);
+  // FIXME: default to bt709, need to handle other known color spaces
+  src = dst = bt709;
+
+  if (src_cs == META_CS_BT709)
+    src = bt709;
+  else if (src_cs == META_CS_BT2020)
+    src = bt2020;
+
+  if (dst_cs == META_CS_BT709)
+    dst = bt709;
+  else if (dst_cs == META_CS_BT2020)
+    dst = bt2020;
+
+  // GetCTMForSrcToDestColorSpace (bt709, bt2020, ctm);
+  GetCTMForSrcToDestColorSpace (src, dst, ctm);
 
   return ctm;
 }
