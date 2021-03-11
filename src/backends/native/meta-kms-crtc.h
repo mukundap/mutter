@@ -28,6 +28,12 @@
 #include "core/util-private.h"
 #include "meta/boxes.h"
 
+typedef enum _MetaKmsCrtcGammaMode
+{
+  META_KMS_CRTC_GAMMA_MODE_NONE = 0,
+  META_KMS_CRTC_GAMMA_MODE_LOGARITHMIC,
+} MetaKmsCrtcGammaMode;
+
 typedef struct _MetaKmsCrtcState
 {
   gboolean is_active;
@@ -35,6 +41,7 @@ typedef struct _MetaKmsCrtcState
   MetaRectangle rect;
   gboolean is_drm_mode_valid;
   drmModeModeInfo drm_mode;
+  MetaKmsCrtcGammaMode gamma_mode;
 
   struct {
     uint16_t *red;

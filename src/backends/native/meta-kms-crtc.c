@@ -465,6 +465,25 @@ parse_active (MetaKmsImplDevice  *impl_device,
 }
 
 static void
+parse_gamma_mode (MetaKmsImplDevice  *impl_device,
+                  MetaKmsProp        *prop,
+                  drmModePropertyPtr  drm_prop,
+                  uint64_t            drm_prop_value,
+                  gpointer            user_data)
+{
+  MetaKmsCrtc *crtc = user_data;
+
+  for (int i = 0; i < drm_prop->count_enums; i++)
+    {
+      if (strcmp (drm_prop->enums[i].name, "logarithmic gamma") == 0)
+      {
+        crtc->current_state.gamma_mode = META_KMS_CRTC_GAMMA_MODE_LOGARITHMIC;
+        break;
+      }
+    }
+}
+
+static void
 init_proporties (MetaKmsCrtc       *crtc,
                  MetaKmsImplDevice *impl_device,
                  drmModeCrtc       *drm_crtc)
@@ -510,6 +529,12 @@ init_proporties (MetaKmsCrtc       *crtc,
         {
           .name = "DEGAMMA_LUT_SIZE",
           .type = DRM_MODE_PROP_RANGE,
+        },
+      [META_KMS_CRTC_PROP_GAMMA_MODE] =
+        {
+          .name = "GAMMA_MODE",
+          .type = DRM_MODE_PROP_ENUM,
+          .parse = parse_gamma_mode,
         },
     }
   };

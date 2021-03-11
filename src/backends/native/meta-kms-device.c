@@ -41,6 +41,8 @@
 #include "backends/native/meta-kms-private.h"
 #include "backends/native/meta-kms-update-private.h"
 
+#define DRM_CLIENT_CAP_ADVANCE_GAMMA_MODES     6
+
 struct _MetaKmsDevice
 {
   GObject parent;
@@ -369,7 +371,22 @@ meta_create_kms_impl_device (MetaKmsDevice      *device,
                              MetaKmsDeviceFlag   flags,
                              GError            **error)
 {
+  int ret;
   meta_assert_in_kms_impl (meta_kms_impl_get_kms (impl));
+
+  ret = drmSetClientCap (fd, DRM_CLIENT_CAP_ADVANCE_GAMMA_MODES, 1);
+  if (ret != 0)
+    {
+      ret = drmSetClientCap (fd, DRM_CLIENT_CAP_ADVANCE_GAMMA_MODES, 1);
+      g_set_error (error, G_IO_ERROR, g_io_error_from_errno (-ret),
+                   "Failed to activate advance gamma modes: %s",
+                   g_strerror (-ret));
+      return NULL;
+    }
+  else
+    {
+      g_message ("Setting advance gamma mode.");
+    }
 
   if (flags & META_KMS_DEVICE_FLAG_NO_MODE_SETTING)
     {
