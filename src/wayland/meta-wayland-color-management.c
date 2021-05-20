@@ -73,8 +73,7 @@ meta_wayland_color_space_send_names (struct wl_resource *resource,
 static void
 destroy_color_space (struct wl_resource *resource)
 {
-  uint32_t color_space =
-               wl_resource_get_user_data(resource);
+  uint32_t color_space = wl_resource_get_user_data(resource);
 
   color_space = META_CS_UNKNOWN;
 }
@@ -96,8 +95,7 @@ color_management_output_get_color_space (struct wl_client *client,
                                          struct wl_resource *cm_resource,
                                          uint32_t id)
 {
-  MetaWaylandSurface *surface =
-       wl_resource_get_user_data (cm_resource);
+  MetaWaylandSurface *surface = wl_resource_get_user_data (cm_resource);
   uint32_t color_space;
   struct wl_resource *resource;
 
@@ -131,11 +129,9 @@ color_management_output_implementation = {
 static void
 color_management_surface_set_extended_dynamic_range (struct wl_client *client,
 					 struct wl_resource *resource,
-					 struct wl_resource *cs_resource,
 					 uint32_t render_intent)
 {
-  MetaWaylandSurface *surface =
-	wl_resource_get_user_data (resource);
+  MetaWaylandSurface *surface = wl_resource_get_user_data (resource);
   // TODO: later
 }
 
@@ -143,13 +139,10 @@ static void
 color_management_surface_set_color_space (struct wl_client *client,
                                           struct wl_resource *resource,
                                           struct wl_resource *cs_resource,
-                                          uint32_t render_intent,
-					  uint32_t alpha_mode)
+                                          uint32_t render_intent)
 {
-  MetaWaylandSurface *surface =
-	wl_resource_get_user_data (resource);
-  uint32_t client_color_space =
-	wl_resource_get_user_data(cs_resource);
+  MetaWaylandSurface *surface = wl_resource_get_user_data (resource);
+  uint32_t client_color_space = wl_resource_get_user_data(cs_resource);
 
   meta_verbose ("%s:%s  color_space = %d \n", __FILE__, __func__,client_color_space);
 
@@ -237,8 +230,7 @@ color_manager_get_color_management_output (struct wl_client *client,
                                            struct wl_resource *output_resource)
 {
   struct wl_resource *resource;
-  MetaWaylandSurface *surface =
-         wl_resource_get_user_data (output_resource);
+  MetaWaylandSurface *surface = wl_resource_get_user_data (output_resource);
   resource = wl_resource_create (client,
                  &zwp_color_management_output_v1_interface,
                  wl_resource_get_version (cm_resource), id);
@@ -255,8 +247,7 @@ color_manager_get_color_management_surface (struct wl_client   *client,
                                      uint32_t id,
                                      struct wl_resource *surface_resource)
 {
-  MetaWaylandSurface *surface =
-		wl_resource_get_user_data (surface_resource);
+  MetaWaylandSurface *surface = wl_resource_get_user_data (surface_resource);
   struct wl_resource *resource;
 
   resource = wl_resource_create (client,
