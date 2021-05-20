@@ -132,6 +132,14 @@ meta_drm_buffer_gbm_get_modifier (MetaDrmBuffer *buffer)
   return gbm_bo_get_modifier (buffer_gbm->bo);
 }
 
+static int
+meta_drm_buffer_gbm_get_plane_count (MetaDrmBuffer *buffer)
+{
+  MetaDrmBufferGbm *buffer_gbm = META_DRM_BUFFER_GBM (buffer);
+
+  return gbm_bo_get_plane_count (buffer_gbm->bo);
+}
+
 static gboolean
 meta_drm_buffer_gbm_ensure_fb_id (MetaDrmBuffer  *buffer,
                                   GError        **error)
@@ -139,6 +147,7 @@ meta_drm_buffer_gbm_ensure_fb_id (MetaDrmBuffer  *buffer,
   MetaDrmBufferGbm *buffer_gbm = META_DRM_BUFFER_GBM (buffer);
   MetaDrmFbArgs fb_args = { 0, };
   struct gbm_bo *bo = buffer_gbm->bo;
+  int plane_count = 0;
 
   if (gbm_bo_get_handle_for_plane (bo, 0).s32 == -1)
     {
@@ -150,9 +159,8 @@ meta_drm_buffer_gbm_ensure_fb_id (MetaDrmBuffer  *buffer,
     }
   else
     {
-      int i;
-
-      for (i = 0; i < gbm_bo_get_plane_count (bo); i++)
+      plane_count = gbm_bo_get_plane_count (bo);
+      for (int i = 0; i < plane_count; i++)
         {
           fb_args.strides[i] = gbm_bo_get_stride_for_plane (bo, i);
           fb_args.handles[i] = gbm_bo_get_handle_for_plane (bo, i).u32;
@@ -165,8 +173,13 @@ meta_drm_buffer_gbm_ensure_fb_id (MetaDrmBuffer  *buffer,
   fb_args.height = gbm_bo_get_height (bo);
   fb_args.format = gbm_bo_get_format (bo);
 
-  if (!meta_drm_buffer_do_ensure_fb_id (META_DRM_BUFFER (buffer_gbm),
-                                        &fb_args, error))
+  if(plane_count > 1) {
+    // hack to make NV12/P010 is working
+    fb_args.offsets[1] = fb_args.strides[1] * fb_args.height;
+  }
+
+  if (!meta_drm_buffer_ensure_fb_id (META_DRM_BUFFER (buffer_gbm),
+                                     &fb_args, error))
     return FALSE;
 
   return TRUE;
@@ -513,4 +526,5 @@ meta_drm_buffer_gbm_class_init (MetaDrmBufferGbmClass *klass)
   buffer_class->get_offset = meta_drm_buffer_gbm_get_offset;
   buffer_class->get_modifier = meta_drm_buffer_gbm_get_modifier;
   buffer_class->fill_timings = meta_drm_buffer_gbm_fill_timings;
+  buffer_class->get_plane_count = meta_drm_buffer_gbm_get_plane_count;
 }

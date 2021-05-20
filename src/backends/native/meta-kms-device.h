@@ -70,6 +70,9 @@ META_EXPORT_TEST
 MetaKmsPlane * meta_kms_device_get_cursor_plane_for (MetaKmsDevice *device,
                                                      MetaKmsCrtc   *crtc);
 
+MetaKmsPlane * meta_kms_device_get_overlay_plane_for (MetaKmsDevice *device,
+                                                     MetaKmsCrtc   *crtc);
+
 GList * meta_kms_device_get_fallback_modes (MetaKmsDevice *device);
 
 META_EXPORT_TEST

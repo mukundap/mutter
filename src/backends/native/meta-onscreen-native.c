@@ -438,8 +438,8 @@ meta_onscreen_native_flip_crtc (CoglOnscreen                *onscreen,
   MetaKms *kms;
   MetaKmsUpdate *kms_update;
   MetaOnscreenNativeSecondaryGpuState *secondary_gpu_state = NULL;
-  MetaDrmBuffer *buffer;
   MetaKmsPlaneAssignment *plane_assignment;
+  MetaDrmBuffer *buffer = NULL;
 
   COGL_TRACE_BEGIN_SCOPED (MetaOnscreenNativeFlipCrtcs,
                            "Onscreen (flip CRTCs)");
@@ -466,15 +466,22 @@ meta_onscreen_native_flip_crtc (CoglOnscreen                *onscreen,
           buffer = secondary_gpu_state->gbm.next_fb;
         }
 
-      plane_assignment = meta_crtc_kms_assign_primary_plane (crtc_kms,
-                                                             buffer,
-                                                             kms_update);
+#if 0 // For debug purpose
+      int plane_count = meta_drm_buffer_get_plane_count(buffer);
+      for(int i = 0; i < plane_count; i++) {
+        int offset = meta_drm_buffer_get_offset(buffer, i);
+        g_print("offset = %d\n",offset);
+      }
 
-      if (rectangles != NULL && n_rectangles != 0)
-        {
-          meta_kms_plane_assignment_set_fb_damage (plane_assignment,
-                                                   rectangles, n_rectangles);
-        }
+      int fb_id = meta_drm_buffer_get_fb_id(buffer);
+      g_print("processing the framebuffer : fb_id = %d \n", fb_id);
+#endif
+
+      if(flags == META_KMS_PAGE_FLIP_LISTENER_FLAG_NONE)
+        meta_crtc_kms_assign_primary_plane (crtc_kms, buffer, kms_update);
+      else
+        meta_crtc_kms_assign_overlay_plane (crtc_kms, buffer, kms_update);
+
       break;
     case META_RENDERER_NATIVE_MODE_SURFACELESS:
       g_assert_not_reached ();

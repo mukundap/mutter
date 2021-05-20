@@ -574,9 +574,9 @@ meta_wayland_dma_buf_try_acquire_scanout (MetaWaylandDmaBufBuffer *dma_buf,
       return NULL;
     }
 
-  if (!meta_onscreen_native_is_buffer_scanout_compatible (onscreen,
+  /*if (!meta_onscreen_native_is_buffer_scanout_compatible (onscreen,
                                                           META_DRM_BUFFER (fb)))
-    return NULL;
+    return NULL;*/
 
   return COGL_SCANOUT (g_steal_pointer (&fb));
 #else

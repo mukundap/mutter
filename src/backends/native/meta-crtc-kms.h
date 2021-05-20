@@ -52,6 +52,10 @@ MetaKmsPlaneAssignment * meta_crtc_kms_assign_primary_plane (MetaCrtcKms   *crtc
                                                              MetaDrmBuffer *buffer,
                                                              MetaKmsUpdate *kms_update);
 
+void meta_crtc_kms_assign_overlay_plane (MetaCrtcKms   *crtc_kms,
+                                         MetaDrmBuffer *buffer,
+                                         MetaKmsUpdate *kms_update);
+
 void meta_crtc_kms_set_mode (MetaCrtcKms   *crtc_kms,
                              MetaKmsUpdate *kms_update);
 

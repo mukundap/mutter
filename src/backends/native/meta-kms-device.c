@@ -227,6 +227,13 @@ meta_kms_device_get_cursor_plane_for (MetaKmsDevice *device,
   return get_plane_with_type_for (device, crtc, META_KMS_PLANE_TYPE_CURSOR);
 }
 
+MetaKmsPlane *
+meta_kms_device_get_overlay_plane_for (MetaKmsDevice *device,
+                                       MetaKmsCrtc   *crtc)
+{
+  return get_plane_with_type_for (device, crtc, META_KMS_PLANE_TYPE_OVERLAY);
+}
+
 GList *
 meta_kms_device_get_fallback_modes (MetaKmsDevice *device)
 {

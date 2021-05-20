@@ -249,6 +249,12 @@ meta_drm_buffer_fill_timings (MetaDrmBuffer  *buffer,
   return META_DRM_BUFFER_GET_CLASS (buffer)->fill_timings (buffer, info, error);
 }
 
+int
+meta_drm_buffer_get_plane_count (MetaDrmBuffer *buffer)
+{
+  return META_DRM_BUFFER_GET_CLASS (buffer)->get_plane_count (buffer);
+}
+
 static void
 meta_drm_buffer_get_property (GObject    *object,
                               guint       prop_id,

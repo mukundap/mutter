@@ -71,4 +71,6 @@ gboolean meta_drm_buffer_fill_timings (MetaDrmBuffer  *buffer,
                                        CoglFrameInfo  *info,
                                        GError        **error);
 
+int meta_drm_buffer_get_plane_count (MetaDrmBuffer *buffer);
+
 #endif /* META_DRM_BUFFER_H */
