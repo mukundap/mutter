@@ -176,6 +176,8 @@ G_BEGIN_DECLS
  * @COGL_PIXEL_FORMAT_BGRA_FP_16161616_PRE: Premultiplied BGRA half floating point, 64 bit
  * @COGL_PIXEL_FORMAT_ARGB_FP_16161616_PRE: Premultiplied ARGB half floating point, 64 bit
  * @COGL_PIXEL_FORMAT_ABGR_FP_16161616_PRE: Premultiplied ABGR half floating point, 64 bit
+ * @COGL_PIXEL_FORMAT_P010: 2 planes: 1 Y-plane, 1 UV-plane (2x2 subsampled Cb:Cr plane 10 bits per channel)
+ * @COGL_PIXEL_FORMAT_NV12: 2 planes: 1 Y-plane, 1 UV-plane (2x2 subsampled Cb:Cr plane)
  *
  * Pixel formats used by Cogl. For the formats with a byte per
  * component, the order of the components specify the order in
@@ -253,7 +255,10 @@ typedef enum /*< prefix=COGL_PIXEL_FORMAT >*/
   COGL_PIXEL_FORMAT_DEPTH_16  = (9 | COGL_DEPTH_BIT),
   COGL_PIXEL_FORMAT_DEPTH_32  = (3 | COGL_DEPTH_BIT),
 
-  COGL_PIXEL_FORMAT_DEPTH_24_STENCIL_8 = (3 | COGL_DEPTH_BIT | COGL_STENCIL_BIT)
+  COGL_PIXEL_FORMAT_DEPTH_24_STENCIL_8 = (3 | COGL_DEPTH_BIT | COGL_STENCIL_BIT),
+
+  COGL_PIXEL_FORMAT_P010 = (14 << 24),
+  COGL_PIXEL_FORMAT_NV12 = (15 << 24)
 } CoglPixelFormat;
 
 /**
