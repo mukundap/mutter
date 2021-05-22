@@ -316,8 +316,11 @@ meta_output_get_display_colorspace(GBytes *edid)
   color_data_block = decode_extended_data_block(g_bytes_get_data (edid, &len),
                                                &data_len,
                                                EDID_CTA_COLORIMETRY_BLOCK_TAG);
-
-  if (color_data_block && data_len != 0) {
+  if(!color_data_block) {
+    g_debug("No EDID extended data block is present. \n");
+    return 0;
+  }
+  if (data_len != 0) {
     /* color_data_block[1] bit 7 is DCI-P3 support info as per CTA-861-G */
     clrspaces = ((color_data_block[1] & 0x80) << 8) | (color_data_block[0]);
   }

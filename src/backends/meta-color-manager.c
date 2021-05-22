@@ -101,6 +101,10 @@ meta_color_manager_get_target_colorspace(MetaBackend *backend)
   output = g_list_first(outputs)->data;
 
   supported_colorspaces = meta_output_get_supported_colorspaces(output);
+  if(!supported_colorspaces) {
+    g_debug("Monitor does not support any extended color spaces. So there is no CSC  involved\n");
+    return target_colorspace;
+  }
   display_supports_colorspace =
          meta_output_get_display_supports_colorspace(output);
   color_manager->display_supports_colorspace = display_supports_colorspace;
@@ -171,17 +175,19 @@ void
 meta_color_manager_perform_csc(uint32_t client_colorspace)
 {
   MetaBackend *backend = meta_get_backend ();
-  MetaColorManager *color_manager =
-         meta_backend_get_color_manager (backend);
+  MetaColorManager *color_manager = meta_backend_get_color_manager (backend);
   uint16_t target_colorspace;
   gboolean needs_csc = false;
+  gboolean display_supports_colorspace = FALSE;
 
   target_colorspace = meta_color_manager_get_target_colorspace(backend);
-  needs_csc = target_colorspace != client_colorspace;
-  gboolean display_supports_colorspace =FALSE;
+  needs_csc = (target_colorspace != META_COLORSPACE_TYPE_Default) &&
+                          (target_colorspace != client_colorspace);
   color_manager->client_colorspace = client_colorspace;
   color_manager->target_colorspace = target_colorspace;
   color_manager->needs_csc = needs_csc;
+
+  g_print("%s: needs_csc = %s\n", __func__, needs_csc ? "TRUE" : "FALSE");
 
   display_supports_colorspace = color_manager->display_supports_colorspace;
 
