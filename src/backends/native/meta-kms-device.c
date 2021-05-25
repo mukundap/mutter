@@ -378,21 +378,21 @@ meta_create_kms_impl_device (MetaKmsDevice      *device,
                              MetaKmsDeviceFlag   flags,
                              GError            **error)
 {
-  int ret;
+
+  uint64_t advance_gamma_modes;
   meta_assert_in_kms_impl (meta_kms_impl_get_kms (impl));
 
-  ret = drmSetClientCap (fd, DRM_CLIENT_CAP_ADVANCE_GAMMA_MODES, 1);
-  if (ret != 0)
+
+  if (drmGetCap (fd, DRM_CLIENT_CAP_ADVANCE_GAMMA_MODES, &advance_gamma_modes) == 0)
     {
-      ret = drmSetClientCap (fd, DRM_CLIENT_CAP_ADVANCE_GAMMA_MODES, 1);
-      g_set_error (error, G_IO_ERROR, g_io_error_from_errno (-ret),
-                   "Failed to activate advance gamma modes: %s",
-                   g_strerror (-ret));
-      return NULL;
-    }
-  else
-    {
-      g_message ("Setting advance gamma mode.");
+      if (advance_gamma_modes)
+        {
+          if (drmSetClientCap (fd, DRM_CLIENT_CAP_ADVANCE_GAMMA_MODES, 1) != 0)
+            {
+              g_message ("Failed to activate advance gamma modes, "
+			 "use legacy gamma mode instead.");
+            }
+        }
     }
 
   if (flags & META_KMS_DEVICE_FLAG_NO_MODE_SETTING)
