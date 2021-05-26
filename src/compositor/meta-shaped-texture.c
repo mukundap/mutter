@@ -381,7 +381,8 @@ get_base_pipeline (MetaShapedTexture *stex,
   cogl_pipeline_set_layer_matrix (pipeline, 0, &matrix);
 
   gboolean needs_csc = meta_color_manager_maybe_needs_csc();
-  if(needs_csc)
+  gboolean use_gl_shaders = meta_color_manager_get_use_glshaders();
+  if(needs_csc && use_gl_shaders)
     {
       uint32_t client_colorspace = 0; //TODO this type needs to be changed to uint16_t
       uint16_t target_colorspace = 0;
