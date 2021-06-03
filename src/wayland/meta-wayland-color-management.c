@@ -127,6 +127,15 @@ color_management_output_implementation = {
 };
 
 static void
+color_management_surface_set_alpha_mode (struct wl_client *client,
+					 struct wl_resource *resource,
+					 uint32_t alpha_mode)
+{
+  MetaWaylandSurface *surface = wl_resource_get_user_data (resource);
+  // TODO: later
+}
+
+static void
 color_management_surface_set_extended_dynamic_range (struct wl_client *client,
 					 struct wl_resource *resource,
 					 uint32_t render_intent)
@@ -172,6 +181,7 @@ destroy_color_management_surface (struct wl_resource *resource)
 
 static const struct zwp_color_management_surface_v1_interface
 color_management_surface_implementation = {
+  color_management_surface_set_alpha_mode,
   color_management_surface_set_extended_dynamic_range,
   color_management_surface_set_color_space,
   color_management_surface_destroy
