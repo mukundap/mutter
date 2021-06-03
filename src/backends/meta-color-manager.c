@@ -90,7 +90,7 @@ meta_color_manager_get_target_colorspace(MetaBackend *backend)
   GList *gpus;
   GList *outputs;
   uint16_t supported_colorspaces;
-  uint16_t target_colorspace = META_COLORSPACE_TYPE_Default;
+  uint16_t target_colorspace = META_COLORSPACE_TYPE_xvYCC709;
   gboolean display_supports_colorspace = FALSE;
   MetaColorManager *color_manager = meta_backend_get_color_manager (backend);
 
@@ -102,7 +102,7 @@ meta_color_manager_get_target_colorspace(MetaBackend *backend)
 
   supported_colorspaces = meta_output_get_supported_colorspaces(output);
   if(!supported_colorspaces) {
-    g_debug("Monitor does not support any extended color spaces. So there is no CSC  involved\n");
+    meta_verbose("Monitor does not support any extended color spaces. Considering BT709 is defaulted\n");
     return target_colorspace;
   }
   display_supports_colorspace =
@@ -181,13 +181,13 @@ meta_color_manager_perform_csc(uint32_t client_colorspace)
   gboolean display_supports_colorspace = FALSE;
 
   target_colorspace = meta_color_manager_get_target_colorspace(backend);
-  needs_csc = (target_colorspace != META_COLORSPACE_TYPE_Default) &&
-                          (target_colorspace != client_colorspace);
+  needs_csc = (target_colorspace != client_colorspace);
   color_manager->client_colorspace = client_colorspace;
   color_manager->target_colorspace = target_colorspace;
   color_manager->needs_csc = needs_csc;
 
-  g_print("%s: needs_csc = %s\n", __func__, needs_csc ? "TRUE" : "FALSE");
+  meta_verbose("%s: needs_csc = %s, target_colorspace = %d\n", __func__,
+                          needs_csc ? "TRUE" : "FALSE", target_colorspace);
 
   display_supports_colorspace = color_manager->display_supports_colorspace;
 

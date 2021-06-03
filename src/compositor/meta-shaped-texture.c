@@ -391,7 +391,6 @@ get_base_pipeline (MetaShapedTexture *stex,
       meta_color_manager_get_colorspaces(&client_colorspace, &target_colorspace);
 
       uint16_t cs = meta_color_manager_map_targetCS_to_clientCS(target_colorspace);
-
       if(client_colorspace != target_colorspace)
         {
           if(client_colorspace == META_CS_BT709)
@@ -405,7 +404,7 @@ get_base_pipeline (MetaShapedTexture *stex,
             }
           else if(client_colorspace == META_CS_BT2020)
             {
-              if(target_colorspace == META_CS_BT709)
+              if(cs == META_CS_BT709)
                 {
                   shader_requirements |= SHADER_KEY_VARIANT_DEGAMMA_SRGB;
                   shader_requirements |= SHADER_KEY_VARIANT_CSC_BT2020_TO_BT709;

@@ -106,7 +106,7 @@ static const char layer_func[] =
     "}\n"
     "\n";
 
-static const char full_shader[] =
+static const char bt709_to_bt2020_full_shader[] =
     "float eotf_srgb_single(float c) {\n"
     "    return c < 0.04045 ? c / 12.92 : pow(((c + 0.055) / 1.055), 2.4);\n"
     "}\n"
@@ -159,6 +159,59 @@ static const char full_shader[] =
     "}\n"
     "\n";
 
+static const char bt2020_to_bt709_full_shader[] =
+    "float eotf_srgb_single(float c) {\n"
+    "    return c < 0.04045 ? c / 12.92 : pow(((c + 0.055) / 1.055), 2.4);\n"
+    "}\n"
+    "\n"
+    "vec3 eotf_srgb(vec3 color) {\n"
+    "    float r = eotf_srgb_single(color.r);\n"
+    "    float g = eotf_srgb_single(color.g);\n"
+    "    float b = eotf_srgb_single(color.b);\n"
+    "    return vec3(r, g, b);\n"
+    "}\n"
+    "\n"
+    "vec3 eotf(vec3 color) {\n"
+    "    return sign(color) * eotf_srgb(abs(color.rgb));\n"
+    "}\n"
+    "\n"
+    "vec3 bt2020_to_bt079_srgb(vec3 color) {\n"
+    "  float r = 1.6605 * color.r - 0.5876 * color.g  - 0.0728 * color.b;\n"
+    "  float g = -0.1246 * color.r + 1.1329 * color.g  - 0.0083 * color.b;\n"
+    "  float b = -0.0182 * color.r - 0.1006 * color.g  + 1.1187 * color.b;\n"
+    "  return vec3(r,g,b);\n"
+    "}\n"
+    "float oetf_srgb_single(float c) {\n"
+    "    float ret = 0.0;\n"
+    "    if (c < 0.0031308) {\n"
+    "        ret = 12.92 * c;\n"
+    "    } else {\n"
+    "        ret = 1.055 * pow(c, 1.0 / 2.4) - 0.055;\n"
+    "    }\n"
+    "    return ret;\n"
+    "}\n"
+    "\n"
+    "vec3 oetf_srgb(vec3 color) {\n"
+    "    float r = oetf_srgb_single(color.r);\n"
+    "    float g = oetf_srgb_single(color.g);\n"
+    "    float b = oetf_srgb_single(color.b);\n"
+    "    return vec3(r, g, b);\n"
+    "}\n"
+    "\n"
+    "vec3 oetf(vec3 linear) {\n"
+    "    return sign(linear) * oetf_srgb(abs(linear.rgb));\n"
+    "}\n"
+    "\n"
+    " vec4 layer_func(vec2 st) \n"
+    "{\n"
+    "    vec3 pqr = texture2D (cogl_sampler0, st).rgb;\n"
+    "    vec3 linear = eotf(pqr);\n"
+    "    vec3 csc = bt2020_to_bt079_srgb(linear);\n"
+    "    vec3 nonlinear = oetf(csc);\n"
+    "    return vec4(nonlinear,1.0);\n"
+    "}\n"
+    "\n";
+
 MetaGLShaders *
 meta_gl_shaders_new ()
 {
@@ -199,8 +252,10 @@ meta_gl_shaders_get_fragment_shader_snippet(uint32_t shader_requirements)
   // TODO need to create the fragment shader hook based on
   // input colorspace and output colorspace.
   // Shader string should be created dynamically and assigned here
-
-  fragment_hook = full_shader; // TODO hardcoding to verify the functionality
+  if(shader_requirements & SHADER_KEY_VARIANT_CSC_BT2020_TO_BT709)
+	fragment_hook = bt2020_to_bt709_full_shader;
+  else if (shader_requirements & SHADER_KEY_VARIANT_CSC_BT709_TO_BT2020)
+    fragment_hook = bt709_to_bt2020_full_shader;
 
   snippet = cogl_snippet_new (COGL_SNIPPET_HOOK_FRAGMENT_GLOBALS,
                                 fragment_hook,
