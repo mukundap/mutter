@@ -1,6 +1,7 @@
 /* -*- mode: C; c-file-style: "gnu"; indent-tabs-mode: nil; -*- */
+
 /*
- * Copyright (C) 2020-21 Intel Corporation.
+ * Copyright (C) 2021 Intel Corporation.
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -22,7 +23,9 @@
  * https://gitlab.freedesktop.org/harishkrupo/weston/-/commit/c465f7fdf604aae39d9209fae6f6246641db32d2
  */
 
-/* When converting from YUV BT.709 to BT.2020, below stages will be involved
+/*
+ * When converting from YUV BT.709 to BT.2020, below stages will be involved
+ *
  * Stage1 : YUV to RGB --> After this conversion, RGB is in non-linear fashion
  * Stage2 : Apply EOTF curve --> non-linear to Linear conversion
  * Stage3 : convert BT.709 RGB colorspace to BT.2020 colorspace
@@ -30,10 +33,12 @@
  *
  */
  
- #include "compositor/meta-gl-shaders.h"
 #include <string.h>
+
+#include "compositor/meta-gl-shaders.h"
+#include "meta/util.h"
  
- G_DEFINE_TYPE (MetaGLShaders, meta_gl_shaders, G_TYPE_OBJECT);
+G_DEFINE_TYPE (MetaGLShaders, meta_gl_shaders, G_TYPE_OBJECT);
  
  /* eotfs -- Non-linearRGB to Liner RGB*/
 static const char eotf_srgb[] =
@@ -152,7 +157,7 @@ static const char bt709_to_bt2020_full_shader[] =
     " vec4 layer_func(vec2 st) \n"
     "{\n"
     "    vec3 pqr = texture2D (cogl_sampler0, st).rgb;\n"
-    "    vec3 linear = eotf(pqr);\n"
+    "    vec3 linear = eotf (pqr);\n"
     "    vec3 csc = bt709_to_bt2020_srgb(linear);\n"
     "    vec3 nonlinear = oetf(csc);\n"
     "    return vec4(nonlinear,1.0);\n"
@@ -215,7 +220,7 @@ static const char bt2020_to_bt709_full_shader[] =
 MetaGLShaders *
 meta_gl_shaders_new ()
 {
-  MetaGLShaders *gl_shaders = g_object_new(META_TYPE_GL_SHADERS, NULL);
+  MetaGLShaders *gl_shaders = g_object_new (META_TYPE_GL_SHADERS, NULL);
 
   uint32_t key_requirements =
 		SHADER_KEY_VARIANT_DEGAMMA_MASK |
@@ -228,15 +233,13 @@ meta_gl_shaders_new ()
 }
 
 CoglSnippet *
-meta_gl_shaders_get_vertex_shader_snippet_test()
+meta_gl_shaders_get_vertex_shader_snippet ()
 {
   const char *vertex_hook;
   CoglSnippet *snippet;
 
-  // TODO create the vertex shader string
   vertex_hook = NULL;
 
-  // Create the Vertex snippet based on the shader string and return
   snippet = cogl_snippet_new (COGL_SNIPPET_HOOK_VERTEX_GLOBALS,
                                 NULL,
                                 vertex_hook);
@@ -244,7 +247,7 @@ meta_gl_shaders_get_vertex_shader_snippet_test()
 }
 
 CoglSnippet *
-meta_gl_shaders_get_fragment_shader_snippet(uint32_t shader_requirements)
+meta_gl_shaders_get_fragment_shader_snippet (uint32_t shader_requirements)
 {
   const char *fragment_hook;
   CoglSnippet *snippet;
@@ -252,10 +255,16 @@ meta_gl_shaders_get_fragment_shader_snippet(uint32_t shader_requirements)
   // TODO need to create the fragment shader hook based on
   // input colorspace and output colorspace.
   // Shader string should be created dynamically and assigned here
-  if(shader_requirements & SHADER_KEY_VARIANT_CSC_BT2020_TO_BT709)
-	fragment_hook = bt2020_to_bt709_full_shader;
+  if (shader_requirements & SHADER_KEY_VARIANT_CSC_BT2020_TO_BT709)
+    {
+      meta_verbose("%s : Added bt2020_to_bt709_full_shader hook \n", __func__);
+      fragment_hook = bt2020_to_bt709_full_shader;
+    }
   else if (shader_requirements & SHADER_KEY_VARIANT_CSC_BT709_TO_BT2020)
-    fragment_hook = bt709_to_bt2020_full_shader;
+    {
+      meta_verbose("%s : Added bt709_to_bt2020_full_shader hook \n", __func__);
+      fragment_hook = bt709_to_bt2020_full_shader;
+    }
 
   snippet = cogl_snippet_new (COGL_SNIPPET_HOOK_FRAGMENT_GLOBALS,
                                 fragment_hook,
@@ -264,12 +273,11 @@ meta_gl_shaders_get_fragment_shader_snippet(uint32_t shader_requirements)
 }
 
 CoglSnippet *
-meta_gl_shaders_get_layer_snippet()
+meta_gl_shaders_get_layer_snippet ()
 {
   const char *layer_hook;
   CoglSnippet *snippet;
 
-  // TODO double check here
   layer_hook = "  cogl_layer = layer_func(cogl_tex_coord0_in.st);\n";
 
   snippet = cogl_snippet_new (COGL_SNIPPET_HOOK_LAYER_FRAGMENT,

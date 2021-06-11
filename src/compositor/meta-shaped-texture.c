@@ -380,31 +380,30 @@ get_base_pipeline (MetaShapedTexture *stex,
 
   cogl_pipeline_set_layer_matrix (pipeline, 0, &matrix);
 
-  gboolean needs_csc = meta_color_manager_maybe_needs_csc();
-  gboolean use_gl_shaders = meta_color_manager_get_use_glshaders();
-  if(needs_csc && use_gl_shaders)
+  gboolean needs_csc = meta_color_manager_maybe_needs_csc ();
+  gboolean use_gl_shaders = meta_color_manager_get_use_glshaders ();
+  if (needs_csc && use_gl_shaders)
     {
       uint32_t client_colorspace = 0; //TODO this type needs to be changed to uint16_t
       uint16_t target_colorspace = 0;
       uint32_t shader_requirements = 0;
 
-      meta_color_manager_get_colorspaces(&client_colorspace, &target_colorspace);
-
-      uint16_t cs = meta_color_manager_map_targetCS_to_clientCS(target_colorspace);
-      if(client_colorspace != target_colorspace)
+      meta_color_manager_get_colorspaces (&client_colorspace, &target_colorspace);
+      uint16_t cs = meta_color_manager_map_targetCS_to_clientCS (target_colorspace);
+      if (client_colorspace != target_colorspace)
         {
-          if(client_colorspace == META_CS_BT709)
+          if (client_colorspace == META_CS_BT709)
             {
-              if(cs == META_CS_BT2020)
+              if (cs == META_CS_BT2020)
                 {
                   shader_requirements |= SHADER_KEY_VARIANT_DEGAMMA_SRGB;
                   shader_requirements |= SHADER_KEY_VARIANT_CSC_BT709_TO_BT2020;
                   shader_requirements |= SHADER_KEY_VARIANT_GAMMA_SRGB;
                 }
             }
-          else if(client_colorspace == META_CS_BT2020)
+          else if (client_colorspace == META_CS_BT2020)
             {
-              if(cs == META_CS_BT709)
+              if (cs == META_CS_BT709)
                 {
                   shader_requirements |= SHADER_KEY_VARIANT_DEGAMMA_SRGB;
                   shader_requirements |= SHADER_KEY_VARIANT_CSC_BT2020_TO_BT709;
@@ -414,10 +413,10 @@ get_base_pipeline (MetaShapedTexture *stex,
         }
 
       // Get the Shader snippets and add them to the pipeline
-      CoglSnippet* fs_snippet = meta_gl_shaders_get_fragment_shader_snippet(shader_requirements);
-      CoglSnippet* layer_snippet = meta_gl_shaders_get_layer_snippet();
+      CoglSnippet* fs_snippet = meta_gl_shaders_get_fragment_shader_snippet (shader_requirements);
+      CoglSnippet* layer_snippet = meta_gl_shaders_get_layer_snippet ();
 
-      cogl_pipeline_add_snippet(pipeline, fs_snippet);
+      cogl_pipeline_add_snippet (pipeline, fs_snippet);
 
       cogl_pipeline_add_layer_snippet (pipeline, 0, layer_snippet);
       cogl_pipeline_add_layer_snippet (pipeline, 1, layer_snippet);

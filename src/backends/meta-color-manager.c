@@ -1,6 +1,7 @@
 /* -*- mode: C; c-file-style: "gnu"; indent-tabs-mode: nil; -*- */
+
 /*
- * Copyright (C) 2020-21 Intel Corporation.
+ * Copyright (C) 2021 Intel Corporation.
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -21,22 +22,16 @@
  */
 
 /*
- * MetaColorManager : This class will perform the Color Management operations
- * like invoking the methods to convert input surface colorspace to the target colorspace.
- * Target colorspace can be readble from MetaOutput(read from Edid parsing).
+ * MetaColorManager : Class works as an interface to perform the Color Space operations
+ * to convert input surface colorspace to the target colorspace.
  *
- * MetaColorManager will take the decision to perform the  blending either using
- * Display HW path/GL Shader path/ Media Engine path.
+ * MetaColorManager will take the decision to perform colorSpace conversion
+ * using Display HW path/GL Shader path/ Media Engine path.
  *
- * If the Display HW does not support the selected target colorspace, then the conversion
- * will happen through GL Shaders
- *
- * TODO : Need to check how the arbitrary colorspace blending will happen by default
- *
- * TODO : Need to decide the ColorTransformPath 
- *
- *
+ * If the Display HW does not support the selected target colorspace, then the
+ * conversion will happen through GL Shaders
  */
+
 #include "config.h"
 
 #include "backends/meta-color-manager.h"
@@ -72,70 +67,64 @@ meta_color_manager_new (MetaBackend *backend)
   cm->backend = backend;
   cm->gl_extn_support = FALSE;
 
-  MetaGLShaders *gl_shaders = meta_gl_shaders_new();
+  MetaGLShaders *gl_shaders = meta_gl_shaders_new ();
   cm->gl_shaders = gl_shaders;
 
   return cm;
 }
 
 /* TODO Getting the target colorspace should be implemented by
- * considering multi monitor and multi gpu. This needs discussion
- * in the team.
+ * considering multi monitor and multi gpu.
  * For time being, it is implemented by considering single monitor
  */
 uint16_t
-meta_color_manager_get_target_colorspace(MetaBackend *backend)
+meta_color_manager_get_target_colorspace (MetaBackend *backend)
 {
+  MetaColorManager *color_manager = meta_backend_get_color_manager (backend);
   MetaOutput *output;
   GList *gpus;
   GList *outputs;
   uint16_t supported_colorspaces;
   uint16_t target_colorspace = META_COLORSPACE_TYPE_xvYCC709;
   gboolean display_supports_colorspace = FALSE;
-  MetaColorManager *color_manager = meta_backend_get_color_manager (backend);
 
   /* TODO : Below changes are to handle the primary monitor for timebeing.
      Need to do the changes if multiples GPU and Outputs are present */
   gpus = meta_backend_get_gpus (backend);
   outputs = meta_gpu_get_outputs (g_list_first (gpus)->data);
-  output = g_list_first(outputs)->data;
+  output = g_list_first (outputs)->data;
 
-  supported_colorspaces = meta_output_get_supported_colorspaces(output);
-  if(!supported_colorspaces) {
-    meta_verbose("Monitor does not support any extended color spaces. Considering BT709 is defaulted\n");
-    return target_colorspace;
-  }
   display_supports_colorspace =
-         meta_output_get_display_supports_colorspace(output);
+         meta_output_get_display_supports_colorspace (output);
   color_manager->display_supports_colorspace = display_supports_colorspace;
 
-  /* TODO : make the decision here on colortransform path. But more
-   * brainstorming is needed on how to get the suface(s) details here.
-   * May be it would be easy if the decision to be taken at
-   * MetaWaylandColorManagement, because it is having the surface details */
+  supported_colorspaces = meta_output_get_supported_colorspaces (output);
+  if (!supported_colorspaces) {
+    meta_verbose("Monitor does not support any extended color spaces. Considering BT709 by default\n");
+    return target_colorspace;
+  }
 
-  // TODO Below code needs to be removed because we are already doing this check in meta-output.c
-  // need to check one more time.
-  //There is some problem with the ENUM declaration values. Need to check.
-  if( supported_colorspaces & META_COLORSPACE_TYPE_BT2020RGB )
-    {
-      target_colorspace = META_COLORSPACE_TYPE_BT2020RGB;
-    }
+  if (supported_colorspaces & META_COLORSPACE_TYPE_BT2020RGB)
+    target_colorspace = META_COLORSPACE_TYPE_BT2020RGB;
+  else if(supported_colorspaces & META_COLORSPACE_TYPE_BT2020YCC)
+    target_colorspace = META_COLORSPACE_TYPE_BT2020YCC;
+  else if(supported_colorspaces & META_COLORSPACE_TYPE_xvYCC709)
+    target_colorspace = META_COLORSPACE_TYPE_xvYCC709;
 
   return target_colorspace;
 }
 
 gboolean
-meta_color_manager_get_use_glshaders(void)
+meta_color_manager_get_use_glshaders (void)
 {
   MetaColorManager *color_manager =
-         meta_backend_get_color_manager (meta_get_backend());
+         meta_backend_get_color_manager (meta_get_backend ());
 
   return color_manager->use_gl_shaders;
 }
 
 gboolean
-meta_color_manager_maybe_needs_csc(void)
+meta_color_manager_maybe_needs_csc (void)
 {
   MetaColorManager *color_manager =
          meta_backend_get_color_manager (meta_get_backend ());
@@ -144,8 +133,8 @@ meta_color_manager_maybe_needs_csc(void)
 }
 
 void
-meta_color_manager_get_colorspaces(uint32_t *client_colorspace,
-                                              uint16_t *target_colorspace)
+meta_color_manager_get_colorspaces (uint32_t *client_colorspace,
+                                    uint16_t *target_colorspace)
 {
   MetaColorManager *color_manager =
          meta_backend_get_color_manager (meta_get_backend ());
@@ -154,34 +143,33 @@ meta_color_manager_get_colorspaces(uint32_t *client_colorspace,
 }
 
 uint16_t
-meta_color_manager_map_targetCS_to_clientCS(uint16_t target_colorspace)
+meta_color_manager_map_targetCS_to_clientCS (uint16_t target_colorspace)
 {
-  if((target_colorspace & META_COLORSPACE_TYPE_BT2020RGB) ||
-    (target_colorspace & META_COLORSPACE_TYPE_BT2020YCC))
-    {
+  if ((target_colorspace & META_COLORSPACE_TYPE_BT2020RGB) ||
+      (target_colorspace & META_COLORSPACE_TYPE_BT2020YCC))
       return META_CS_BT2020;
-    }
-  else if(target_colorspace & META_COLORSPACE_TYPE_xvYCC709)
-    {
+  else if (target_colorspace & META_COLORSPACE_TYPE_xvYCC709)
       return META_CS_BT709;
-    }
   else
-    {
       return META_CS_UNKNOWN;
-    }
 }
 
 void
-meta_color_manager_perform_csc(uint32_t client_colorspace)
+meta_color_manager_perform_csc (uint32_t client_colorspace)
 {
   MetaBackend *backend = meta_get_backend ();
   MetaColorManager *color_manager = meta_backend_get_color_manager (backend);
   uint16_t target_colorspace;
-  gboolean needs_csc = false;
+  uint16_t target_cs;
+  gboolean needs_csc = FALSE;
   gboolean display_supports_colorspace = FALSE;
 
-  target_colorspace = meta_color_manager_get_target_colorspace(backend);
-  needs_csc = (target_colorspace != client_colorspace);
+  target_cs = meta_color_manager_get_target_colorspace (backend);
+  target_colorspace = meta_color_manager_map_targetCS_to_clientCS (target_cs);
+
+  needs_csc = (target_colorspace != META_CS_UNKNOWN) &&
+                   (target_colorspace != client_colorspace);
+
   color_manager->client_colorspace = client_colorspace;
   color_manager->target_colorspace = target_colorspace;
   color_manager->needs_csc = needs_csc;
@@ -191,22 +179,18 @@ meta_color_manager_perform_csc(uint32_t client_colorspace)
 
   display_supports_colorspace = color_manager->display_supports_colorspace;
 
-  if(!needs_csc)
+  if (!needs_csc)
     return;
 
-  // TODO need to check when to toggle this use_gl_shaders variable after once commit
-
-  if(display_supports_colorspace)
+  if (display_supports_colorspace)
     {
-      // perform the degamma for non-linear to linear transform
-      // perform CSC/CTM for color gamu mapping
-      // perform Gamma for linear to non-linear transform
       color_manager->use_gl_shaders = FALSE;
+      meta_verbose("Using Display DRM CSC Path \n");
     }
   else
     {
-      //Set the use_gl_shaders variable to use the gl_shaders to perform csc
       color_manager->use_gl_shaders = TRUE;
+      meta_verbose("Using GL Shaders CSC Path \n");
     }
   return;
 }
@@ -214,7 +198,6 @@ meta_color_manager_perform_csc(uint32_t client_colorspace)
 static void
 meta_color_manager_finalize (GObject *object)
 {
-
   G_OBJECT_CLASS (meta_color_manager_parent_class)->finalize (object);
 }
 

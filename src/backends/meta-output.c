@@ -306,17 +306,17 @@ meta_output_crtc_to_logical_transform (MetaOutput           *output,
 }
 
 uint16_t
-meta_output_get_display_colorspace(GBytes *edid)
+meta_output_get_display_colorspace (GBytes *edid)
 {
   uint8_t data_len = 0;
   size_t len;
   const uint8_t *color_data_block;
   uint16_t clrspaces = 0;
 
-  color_data_block = decode_extended_data_block(g_bytes_get_data (edid, &len),
+  color_data_block = decode_extended_data_block (g_bytes_get_data (edid, &len),
                                                &data_len,
                                                EDID_CTA_COLORIMETRY_BLOCK_TAG);
-  if(!color_data_block) {
+  if (!color_data_block) {
     g_debug("No EDID extended data block is present. \n");
     return 0;
   }

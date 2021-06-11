@@ -1,6 +1,7 @@
 /* -*- mode: C; c-file-style: "gnu"; indent-tabs-mode: nil; -*- */
+
 /*
- * Copyright (C) 2020 -21 Intel Corporation.
+ * Copyright (C) 2021 Intel Corporation.
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -44,18 +45,18 @@ typedef enum _MetaColorTransformPath
 
 MetaColorManager * meta_color_manager_new (MetaBackend *backend);
 
-uint16_t meta_color_manager_get_target_colorspace(MetaBackend *backend);
+uint16_t meta_color_manager_get_target_colorspace (MetaBackend *backend);
 
-void meta_color_manager_perform_csc(uint32_t client_color_space);
+void meta_color_manager_perform_csc (uint32_t client_color_space);
 
-gboolean meta_color_manager_get_use_glshaders(void);
+gboolean meta_color_manager_get_use_glshaders (void);
 
-void meta_color_manager_get_colorspaces(uint32_t *client_colorspace,
-                                                  uint16_t *target_colorspace);
+void meta_color_manager_get_colorspaces (uint32_t *client_colorspace,
+                                         uint16_t *target_colorspace);
+
+gboolean meta_color_manager_maybe_needs_csc (void);
 
 uint16_t
-meta_color_manager_map_targetCS_to_clientCS(uint16_t target_colorspace);
-
-gboolean meta_color_manager_maybe_needs_csc(void);
+meta_color_manager_map_targetCS_to_clientCS (uint16_t target_colorspace);
 
 #endif /* META_COLOR_MANAGER_H */
