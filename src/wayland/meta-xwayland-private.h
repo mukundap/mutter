@@ -60,4 +60,9 @@ gboolean meta_xwayland_start_xserver_finish (MetaXWaylandManager  *manager,
                                              GAsyncResult         *result,
                                              GError              **error);
 
+bool
+meta_xwayland_global_filter (const struct wl_client *client,
+                             const struct wl_global *global,
+                             void                   *data);
+
 #endif /* META_XWAYLAND_PRIVATE_H */

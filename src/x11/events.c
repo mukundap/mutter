@@ -50,7 +50,7 @@
 #include "x11/window-x11.h"
 #include "x11/xprops.h"
 
-#ifdef HAVE_WAYLAND
+#ifdef HAVE_XWAYLAND
 #include "wayland/meta-wayland-private.h"
 #include "wayland/meta-xwayland-private.h"
 #include "wayland/meta-xwayland.h"
@@ -1652,7 +1652,7 @@ handle_other_xevent (MetaX11Display *x11_display,
     case ClientMessage:
       if (window)
         {
-#ifdef HAVE_WAYLAND
+#ifdef HAVE_XWAYLAND
           if (event->xclient.message_type == x11_display->atom_WL_SURFACE_ID)
             {
               guint32 surface_id = event->xclient.data.l[0];
@@ -1896,7 +1896,7 @@ meta_x11_display_handle_xevent (MetaX11Display *x11_display,
       goto out;
     }
 
-#ifdef HAVE_WAYLAND
+#ifdef HAVE_XWAYLAND
   if (meta_is_wayland_compositor () &&
       meta_xwayland_handle_xevent (event))
     {

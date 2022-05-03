@@ -51,6 +51,7 @@
 #include "meta/main.h"
 #include "meta/meta-backend.h"
 #include "meta/meta-x11-errors.h"
+#include "wayland/meta-xwayland-grab-keyboard.h"
 #include "wayland/meta-xwayland-surface.h"
 #include "x11/meta-x11-display-private.h"
 
@@ -1274,6 +1275,23 @@ meta_xwayland_handle_xevent (XEvent *event)
     }
 
   return FALSE;
+}
+
+bool
+meta_xwayland_global_filter (const struct wl_client *client,
+                             const struct wl_global *global,
+                             void                   *data)
+{
+  MetaWaylandCompositor *compositor = (MetaWaylandCompositor *) data;
+  MetaXWaylandManager *xwayland_manager = &compositor->xwayland_manager;
+
+  /* Keyboard grabbing protocol is for Xwayland only */
+  if (client != xwayland_manager->client)
+    return (wl_global_get_interface (global) !=
+            &zwp_xwayland_keyboard_grab_manager_v1_interface);
+
+  /* All others are visible to all clients */
+  return true;
 }
 
 gboolean

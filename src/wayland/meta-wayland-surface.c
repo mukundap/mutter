@@ -51,8 +51,11 @@
 #include "wayland/meta-wayland-viewporter.h"
 #include "wayland/meta-wayland-xdg-shell.h"
 #include "wayland/meta-window-wayland.h"
+
+#ifdef HAVE_XWAYLAND
 #include "wayland/meta-xwayland-private.h"
 #include "wayland/meta-xwayland-private.h"
+#endif
 
 enum
 {
