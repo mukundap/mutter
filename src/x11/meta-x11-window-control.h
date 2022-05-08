@@ -23,7 +23,6 @@
 #ifndef META_X11_WINDOW__CONTROL_H
 #define META_X11_WINDOW__CONTROL_H
 
-#include <gdk/gdkx.h>
 
 #include "meta/boxes.h"
 #include "meta/common.h"

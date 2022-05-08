@@ -21,7 +21,6 @@
 
 #include "config.h"
 
-#include <gdk/gdk.h>
 #include <math.h>
 #include <string.h>
 
@@ -1015,7 +1014,6 @@ see_region (cairo_region_t *region,
   cairo_surface_destroy (surface);
 }
 #endif
-
 
 static void
 meta_window_actor_cull_out (MetaCullable   *cullable,
