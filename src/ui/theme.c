@@ -94,7 +94,7 @@ meta_frame_layout_get_borders (const MetaFrameLayout *layout,
   borders->visible.right  = layout->frame_border.right;
   borders->visible.bottom = layout->frame_border.bottom;
 
-  borders->invisible = layout->invisible_border;
+  borders->invisible = *((MetaFrameBorder *)&layout->invisible_border);
 
   draggable_borders = meta_prefs_get_draggable_border_width ();
 
@@ -124,9 +124,9 @@ meta_frame_layout_get_borders (const MetaFrameLayout *layout,
   borders->total.top    = borders->invisible.top    + borders->visible.top;
 
   /* Scale geometry for HiDPI, see comment in meta_frame_layout_draw_with_style() */
-  scale_border (&borders->visible, scale);
-  scale_border (&borders->invisible, scale);
-  scale_border (&borders->total, scale);
+  scale_border ((GtkBorder *)&borders->visible, scale);
+  scale_border ((GtkBorder *)&borders->invisible, scale);
+  scale_border ((GtkBorder *)&borders->total, scale);
 }
 
 int
@@ -384,7 +384,7 @@ meta_frame_layout_calc_geometry (MetaFrameLayout        *layout,
   fgeom->borders = borders;
 
   /* Scale geometry for HiDPI, see comment in meta_frame_layout_draw_with_style() */
-  fgeom->content_border = layout->frame_border;
+  fgeom->content_border = *((MetaFrameBorder *)&layout->frame_border);
   fgeom->content_border.left   += layout->titlebar_border.left * scale;
   fgeom->content_border.right  += layout->titlebar_border.right * scale;
   fgeom->content_border.top    += layout->titlebar_border.top * scale;
