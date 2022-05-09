@@ -41,4 +41,8 @@ gboolean meta_parse_accelerator (const char   *accel,
 gboolean meta_parse_modifier    (const char          *accel,
                                  MetaVirtualModifier *mask);
 
+META_EXPORT
+char * meta_accelerator_name    (ClutterModifierType accelerator_mods,
+                                 unsigned int        accelerator_key);
+
 #endif /* META_ACCEL_PARSE_H */
