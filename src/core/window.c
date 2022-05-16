@@ -203,6 +203,10 @@ enum
   PROP_GTK_MENUBAR_OBJECT_PATH,
   PROP_ON_ALL_WORKSPACES,
   PROP_IS_ALIVE,
+  PROP_DISPLAY,
+  PROP_EFFECT,
+  PROP_SURFACE,
+  PROP_XWINDOW,
 
   PROP_LAST,
 };
@@ -416,6 +420,18 @@ meta_window_get_property(GObject         *object,
     case PROP_ON_ALL_WORKSPACES:
       g_value_set_boolean (value, win->on_all_workspaces);
       break;
+    case PROP_DISPLAY:
+      g_value_set_object (value, win->display);
+      break;
+    case PROP_EFFECT:
+      g_value_set_int (value, win->pending_compositor_effect);
+      break;
+    case PROP_SURFACE:
+      g_value_set_pointer (value, win->surface);
+      break;
+    case PROP_XWINDOW:
+      g_value_set_ulong (value, win->xwindow);
+      break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
@@ -428,287 +444,26 @@ meta_window_set_property(GObject         *object,
                          const GValue    *value,
                          GParamSpec      *pspec)
 {
+  MetaWindow *win = META_WINDOW (object);
+
   switch (prop_id)
     {
+    case PROP_DISPLAY:
+      win->display = g_value_get_object (value);
+      break;
+    case PROP_EFFECT:
+      win->pending_compositor_effect = g_value_get_int (value);
+      break;
+    case PROP_SURFACE:
+      win->surface = g_value_get_pointer (value);
+      break;
+    case PROP_XWINDOW:
+      win->xwindow = g_value_get_ulong (value);
+      break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
     }
-}
-
-static void
-meta_window_class_init (MetaWindowClass *klass)
-{
-  GObjectClass *object_class = G_OBJECT_CLASS (klass);
-
-  object_class->finalize = meta_window_finalize;
-
-  object_class->get_property = meta_window_get_property;
-  object_class->set_property = meta_window_set_property;
-
-  klass->grab_op_began = meta_window_real_grab_op_began;
-  klass->grab_op_ended = meta_window_real_grab_op_ended;
-  klass->current_workspace_changed = meta_window_real_current_workspace_changed;
-  klass->update_struts = meta_window_real_update_struts;
-  klass->get_default_skip_hints = meta_window_real_get_default_skip_hints;
-  klass->get_client_pid = meta_window_real_get_client_pid;
-
-  obj_props[PROP_TITLE] =
-    g_param_spec_string ("title",
-                         "Title",
-                         "The title of the window",
-                         NULL,
-                         G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
-  obj_props[PROP_ICON] =
-    g_param_spec_pointer ("icon",
-                          "Icon",
-                          "Normal icon, usually 96x96 pixels",
-                          G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
-  obj_props[PROP_MINI_ICON] =
-    g_param_spec_pointer ("mini-icon",
-                          "Mini Icon",
-                          "Mini icon, usually 16x16 pixels",
-                          G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
-  obj_props[PROP_DECORATED] =
-    g_param_spec_boolean ("decorated",
-                          "Decorated",
-                          "Whether window is decorated",
-                          TRUE,
-                          G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
-  obj_props[PROP_FULLSCREEN] =
-    g_param_spec_boolean ("fullscreen",
-                          "Fullscreen",
-                          "Whether window is fullscreened",
-                          FALSE,
-                          G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
-  obj_props[PROP_MAXIMIZED_HORIZONTALLY] =
-    g_param_spec_boolean ("maximized-horizontally",
-                          "Maximized horizontally",
-                          "Whether window is maximized horizontally",
-                          FALSE,
-                          G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
-  obj_props[PROP_MAXIMIZED_VERTICALLY] =
-    g_param_spec_boolean ("maximized-vertically",
-                          "Maximizing vertically",
-                          "Whether window is maximized vertically",
-                          FALSE,
-                          G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
-  obj_props[PROP_MINIMIZED] =
-    g_param_spec_boolean ("minimized",
-                          "Minimizing",
-                          "Whether window is minimized",
-                          FALSE,
-                          G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
-  obj_props[PROP_WINDOW_TYPE] =
-    g_param_spec_enum ("window-type",
-                       "Window Type",
-                       "The type of the window",
-                       META_TYPE_WINDOW_TYPE,
-                       META_WINDOW_NORMAL,
-                       G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
-  obj_props[PROP_USER_TIME] =
-    g_param_spec_uint ("user-time",
-                       "User time",
-                       "Timestamp of last user interaction",
-                       0,
-                       G_MAXUINT,
-                       0,
-                       G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
-  obj_props[PROP_DEMANDS_ATTENTION] =
-    g_param_spec_boolean ("demands-attention",
-                          "Demands Attention",
-                          "Whether the window has _NET_WM_STATE_DEMANDS_ATTENTION set",
-                          FALSE,
-                          G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
-  obj_props[PROP_URGENT] =
-    g_param_spec_boolean ("urgent",
-                          "Urgent",
-                          "Whether the urgent flag of WM_HINTS is set",
-                          FALSE,
-                          G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
-  obj_props[PROP_SKIP_TASKBAR] =
-    g_param_spec_boolean ("skip-taskbar",
-                          "Skip taskbar",
-                          "Whether the skip-taskbar flag of WM_HINTS is set",
-                          FALSE,
-                          G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
-  obj_props[PROP_MUTTER_HINTS] =
-    g_param_spec_string ("mutter-hints",
-                         "_MUTTER_HINTS",
-                         "Contents of the _MUTTER_HINTS property of this window",
-                         NULL,
-                         G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
-  obj_props[PROP_APPEARS_FOCUSED] =
-    g_param_spec_boolean ("appears-focused",
-                          "Appears focused",
-                          "Whether the window is drawn as being focused",
-                          FALSE,
-                          G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
-  obj_props[PROP_RESIZEABLE] =
-    g_param_spec_boolean ("resizeable",
-                          "Resizeable",
-                          "Whether the window can be resized",
-                          FALSE,
-                          G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
-  obj_props[PROP_ABOVE] =
-    g_param_spec_boolean ("above",
-                          "Above",
-                          "Whether the window is shown as always-on-top",
-                          FALSE,
-                          G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
-  obj_props[PROP_WM_CLASS] =
-    g_param_spec_string ("wm-class",
-                         "WM_CLASS",
-                         "Contents of the WM_CLASS property of this window",
-                         NULL,
-                         G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
-  obj_props[PROP_GTK_APPLICATION_ID] =
-    g_param_spec_string ("gtk-application-id",
-                         "_GTK_APPLICATION_ID",
-                         "Contents of the _GTK_APPLICATION_ID property of this window",
-                         NULL,
-                         G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
-  obj_props[PROP_GTK_UNIQUE_BUS_NAME] =
-    g_param_spec_string ("gtk-unique-bus-name",
-                         "_GTK_UNIQUE_BUS_NAME",
-                         "Contents of the _GTK_UNIQUE_BUS_NAME property of this window",
-                         NULL,
-                         G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
-  obj_props[PROP_GTK_APPLICATION_OBJECT_PATH] =
-    g_param_spec_string ("gtk-application-object-path",
-                         "_GTK_APPLICATION_OBJECT_PATH",
-                         "Contents of the _GTK_APPLICATION_OBJECT_PATH property of this window",
-                         NULL,
-                         G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
-  obj_props[PROP_GTK_WINDOW_OBJECT_PATH] =
-    g_param_spec_string ("gtk-window-object-path",
-                         "_GTK_WINDOW_OBJECT_PATH",
-                         "Contents of the _GTK_WINDOW_OBJECT_PATH property of this window",
-                         NULL,
-                         G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
-  obj_props[PROP_GTK_APP_MENU_OBJECT_PATH] =
-    g_param_spec_string ("gtk-app-menu-object-path",
-                         "_GTK_APP_MENU_OBJECT_PATH",
-                         "Contents of the _GTK_APP_MENU_OBJECT_PATH property of this window",
-                         NULL,
-                         G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
-  obj_props[PROP_GTK_MENUBAR_OBJECT_PATH] =
-    g_param_spec_string ("gtk-menubar-object-path",
-                         "_GTK_MENUBAR_OBJECT_PATH",
-                         "Contents of the _GTK_MENUBAR_OBJECT_PATH property of this window",
-                         NULL,
-                         G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
-  obj_props[PROP_ON_ALL_WORKSPACES] =
-    g_param_spec_boolean ("on-all-workspaces",
-                          "On all workspaces",
-                          "Whether the window is set to appear on all workspaces",
-                          FALSE,
-                          G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
-
-  obj_props[PROP_IS_ALIVE] =
-    g_param_spec_boolean ("is-alive",
-                          "Is alive",
-                          "Whether the window responds to pings",
-                          TRUE,
-                          G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
-
-  g_object_class_install_properties (object_class, PROP_LAST, obj_props);
-
-  window_signals[WORKSPACE_CHANGED] =
-    g_signal_new ("workspace-changed",
-                  G_TYPE_FROM_CLASS (object_class),
-                  G_SIGNAL_RUN_LAST,
-                  0,
-                  NULL, NULL, NULL,
-                  G_TYPE_NONE, 0);
-
-  window_signals[FOCUS] =
-    g_signal_new ("focus",
-                  G_TYPE_FROM_CLASS (object_class),
-                  G_SIGNAL_RUN_LAST,
-                  0,
-                  NULL, NULL, NULL,
-                  G_TYPE_NONE, 0);
-
-  window_signals[RAISED] =
-    g_signal_new ("raised",
-                  G_TYPE_FROM_CLASS (object_class),
-                  G_SIGNAL_RUN_LAST,
-                  0,
-                  NULL, NULL, NULL,
-                  G_TYPE_NONE, 0);
-
-  window_signals[UNMANAGING] =
-    g_signal_new ("unmanaging",
-                  G_TYPE_FROM_CLASS (object_class),
-                  G_SIGNAL_RUN_LAST,
-                  0,
-                  NULL, NULL, NULL,
-                  G_TYPE_NONE, 0);
-
-  window_signals[UNMANAGED] =
-    g_signal_new ("unmanaged",
-                  G_TYPE_FROM_CLASS (object_class),
-                  G_SIGNAL_RUN_LAST,
-                  0,
-                  NULL, NULL, NULL,
-                  G_TYPE_NONE, 0);
-
-  /**
-   * MetaWindow::position-changed:
-   * @window: a #MetaWindow
-   *
-   * This is emitted when the position of a window might
-   * have changed. Specifically, this is emitted when the
-   * position of the toplevel window has changed, or when
-   * the position of the client window has changed.
-   */
-  window_signals[POSITION_CHANGED] =
-    g_signal_new ("position-changed",
-                  G_TYPE_FROM_CLASS (object_class),
-                  G_SIGNAL_RUN_LAST,
-                  0,
-                  NULL, NULL, NULL,
-                  G_TYPE_NONE, 0);
-
-  /**
-   * MetaWindow::shown:
-   * @window: a #MetaWindow
-   *
-   * This is emitted after a window has been shown.
-   */
-  window_signals[SHOWN] =
-    g_signal_new ("shown",
-                  G_TYPE_FROM_CLASS (object_class),
-                  G_SIGNAL_RUN_LAST,
-                  0,
-                  NULL, NULL, NULL,
-                  G_TYPE_NONE, 0);
-
-  /**
-   * MetaWindow::size-changed:
-   * @window: a #MetaWindow
-   *
-   * This is emitted when the size of a window might
-   * have changed. Specifically, this is emitted when the
-   * size of the toplevel window has changed, or when the
-   * size of the client window has changed.
-   */
-  window_signals[SIZE_CHANGED] =
-    g_signal_new ("size-changed",
-                  G_TYPE_FROM_CLASS (object_class),
-                  G_SIGNAL_RUN_LAST,
-                  0,
-                  NULL, NULL, NULL,
-                  G_TYPE_NONE, 0);
-}
-
-static void
-meta_window_init (MetaWindow *self)
-{
-  self->stamp = next_window_stamp++;
-  meta_prefs_add_listener (prefs_changed_callback, self);
-  self->is_alive = TRUE;
 }
 
 static gboolean
@@ -955,54 +710,21 @@ meta_window_manage (MetaWindow *window)
   META_WINDOW_GET_CLASS (window)->manage (window);
 }
 
-MetaWindow *
-_meta_window_shared_new (MetaDisplay         *display,
-                         MetaWindowClientType client_type,
-                         MetaWaylandSurface  *surface,
-                         Window               xwindow,
-                         gulong               existing_wm_state,
-                         MetaCompEffect       effect,
-                         XWindowAttributes   *attrs)
+static void
+meta_window_constructed (GObject *object)
 {
+  MetaWindow *window = META_WINDOW (object);
+  MetaDisplay *display = window->display;
   MetaContext *context = meta_display_get_context (display);
   MetaBackend *backend = meta_context_get_backend (context);
   MetaWorkspaceManager *workspace_manager = display->workspace_manager;
-  MetaWindow *window;
 
-  COGL_TRACE_BEGIN_SCOPED (MetaWindowSharedNew,
-                           "Window (new)");
-
-  g_assert (attrs != NULL);
-
-  meta_verbose ("attrs->map_state = %d (%s)",
-                attrs->map_state,
-                (attrs->map_state == IsUnmapped) ?
-                "IsUnmapped" :
-                (attrs->map_state == IsViewable) ?
-                "IsViewable" :
-                (attrs->map_state == IsUnviewable) ?
-                "IsUnviewable" :
-                "(unknown)");
-
-  if (client_type == META_WINDOW_CLIENT_TYPE_X11 && !meta_is_wayland_compositor ())
-    window = g_object_new (META_TYPE_WINDOW_X11, NULL);
-#ifdef HAVE_WAYLAND
-  else if (client_type == META_WINDOW_CLIENT_TYPE_X11)
-    window = g_object_new (META_TYPE_WINDOW_XWAYLAND, NULL);
-  else if (client_type == META_WINDOW_CLIENT_TYPE_WAYLAND)
-    window = g_object_new (META_TYPE_WINDOW_WAYLAND, NULL);
-#endif
-  else
-    g_assert_not_reached ();
+  COGL_TRACE_BEGIN_SCOPED (MetaWindowSharedInit,
+                           "Window (init)");
 
   window->constructing = TRUE;
 
-  window->client_type = client_type;
-  window->surface = surface;
-  window->xwindow = xwindow;
-
-  window->display = display;
-  meta_display_register_stamp (window->display, &window->stamp, window);
+  meta_display_register_stamp (display, &window->stamp, window);
 
   window->workspace = NULL;
 
@@ -1014,21 +736,10 @@ _meta_window_shared_new (MetaDisplay         *display,
   meta_window_update_sandboxed_app_id (window);
   meta_window_update_desc (window);
 
-  window->override_redirect = attrs->override_redirect;
 
   /* avoid tons of stack updates */
-  meta_stack_freeze (window->display->stack);
+  meta_stack_freeze (display->stack);
 
-  window->rect.x = attrs->x;
-  window->rect.y = attrs->y;
-  window->rect.width = attrs->width;
-  window->rect.height = attrs->height;
-
-  /* size_hints are the "request" */
-  window->size_hints.x = attrs->x;
-  window->size_hints.y = attrs->y;
-  window->size_hints.width = attrs->width;
-  window->size_hints.height = attrs->height;
   /* initialize the remaining size_hints as if size_hints.flags were zero */
   meta_set_normal_hints (window, NULL);
 
@@ -1036,9 +747,6 @@ _meta_window_shared_new (MetaDisplay         *display,
   window->saved_rect = window->rect;
   window->saved_rect_fullscreen = window->rect;
   window->unconstrained_rect = window->rect;
-
-  window->depth = attrs->depth;
-  window->xvisual = attrs->visual;
 
   window->title = NULL;
 
@@ -1065,10 +773,8 @@ _meta_window_shared_new (MetaDisplay         *display,
   window->minimized = FALSE;
   window->tab_unminimized = FALSE;
   window->iconic = FALSE;
-  window->mapped = attrs->map_state != IsUnmapped;
   window->known_to_compositor = FALSE;
   window->visible_to_compositor = FALSE;
-  window->pending_compositor_effect = effect;
   /* if already mapped, no need to worry about focus-on-first-time-showing */
   window->showing_for_first_time = !window->mapped;
   /* if already mapped we don't want to do the placement thing;
@@ -1100,18 +806,6 @@ _meta_window_shared_new (MetaDisplay         *display,
   window->mwm_has_maximize_func = TRUE;
   window->mwm_has_move_func = TRUE;
   window->mwm_has_resize_func = TRUE;
-
-  switch (client_type)
-    {
-    case META_WINDOW_CLIENT_TYPE_X11:
-      window->decorated = TRUE;
-      window->hidden = FALSE;
-      break;
-    case META_WINDOW_CLIENT_TYPE_WAYLAND:
-      window->decorated = FALSE;
-      window->hidden = TRUE;
-      break;
-    }
 
   window->has_close_func = TRUE;
   window->has_minimize_func = TRUE;
@@ -1199,23 +893,10 @@ _meta_window_shared_new (MetaDisplay         *display,
       meta_verbose ("Window %s asked to start out minimized", window->desc);
     }
 
-  if (existing_wm_state == IconicState)
-    {
-      /* WM_STATE said minimized */
-      window->minimized = TRUE;
-      meta_verbose ("Window %s had preexisting WM_STATE = IconicState, minimizing",
-                    window->desc);
-
-      /* Assume window was previously placed, though perhaps it's
-       * been iconic its whole life, we have no way of knowing.
-       */
-      window->placed = TRUE;
-    }
-
   /* Apply any window attributes such as initial workspace
    * based on startup notification
    */
-  meta_display_apply_startup_properties (window->display, window);
+  meta_display_apply_startup_properties (display, window);
 
   /* Try to get a "launch timestamp" for the window.  If the window is
    * a transient, we'd like to be able to get a last-usage timestamp
@@ -1239,7 +920,7 @@ _meta_window_shared_new (MetaDisplay         *display,
        * being recorded as a fallback for potential transients
        */
       window->net_wm_user_time =
-        meta_display_get_current_time_roundtrip (window->display);
+        meta_display_get_current_time_roundtrip (display);
   }
 
   window->attached = meta_window_should_attach_to_parent (window);
@@ -1347,8 +1028,7 @@ _meta_window_shared_new (MetaDisplay         *display,
    * means restacking it.
    */
   if (meta_window_is_stackable (window))
-    meta_stack_add (window->display->stack,
-                    window);
+    meta_stack_add (display->stack, window);
   else if (window->override_redirect)
     window->layer = META_LAYER_OVERRIDE_REDIRECT; /* otherwise set by MetaStack */
 
@@ -1361,18 +1041,18 @@ _meta_window_shared_new (MetaDisplay         *display,
       set_net_wm_state (window);
     }
 
-  meta_compositor_add_window (window->display->compositor, window);
+  meta_compositor_add_window (display->compositor, window);
   window->known_to_compositor = TRUE;
 
   /* Sync stack changes */
-  meta_stack_thaw (window->display->stack);
+  meta_stack_thaw (display->stack);
 
   /* Usually the we'll have queued a stack sync anyways, because we've
    * added a new frame window or restacked. But if an undecorated
    * window is mapped, already stacked in the right place, then we
    * might need to do this explicitly.
    */
-  meta_stack_tracker_queue_sync_stack (window->display->stack_tracker);
+  meta_stack_tracker_queue_sync_stack (display->stack_tracker);
 
   /* disable show desktop mode unless we're a desktop component */
   maybe_leave_show_desktop_mode (window);
@@ -1404,9 +1084,7 @@ _meta_window_shared_new (MetaDisplay         *display,
   meta_display_notify_window_created (display, window);
 
   if (window->wm_state_demands_attention)
-    g_signal_emit_by_name (window->display, "window-demands-attention", window);
-
-  return window;
+    g_signal_emit_by_name (display, "window-demands-attention", window);
 }
 
 static gboolean
@@ -1425,6 +1103,311 @@ detach_foreach_func (MetaWindow *window,
     }
 
   return TRUE;
+}
+
+static void
+meta_window_class_init (MetaWindowClass *klass)
+{
+  GObjectClass *object_class = G_OBJECT_CLASS (klass);
+
+  object_class->finalize = meta_window_finalize;
+  object_class->constructed = meta_window_constructed;
+
+  object_class->get_property = meta_window_get_property;
+  object_class->set_property = meta_window_set_property;
+
+  klass->grab_op_began = meta_window_real_grab_op_began;
+  klass->grab_op_ended = meta_window_real_grab_op_ended;
+  klass->current_workspace_changed = meta_window_real_current_workspace_changed;
+  klass->update_struts = meta_window_real_update_struts;
+  klass->get_default_skip_hints = meta_window_real_get_default_skip_hints;
+  klass->get_client_pid = meta_window_real_get_client_pid;
+
+  obj_props[PROP_TITLE] =
+    g_param_spec_string ("title",
+                         "Title",
+                         "The title of the window",
+                         NULL,
+                         G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
+  obj_props[PROP_ICON] =
+    g_param_spec_pointer ("icon",
+                          "Icon",
+                          "Normal icon, usually 96x96 pixels",
+                          G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
+  obj_props[PROP_MINI_ICON] =
+    g_param_spec_pointer ("mini-icon",
+                          "Mini Icon",
+                          "Mini icon, usually 16x16 pixels",
+                          G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
+  obj_props[PROP_DECORATED] =
+    g_param_spec_boolean ("decorated",
+                          "Decorated",
+                          "Whether window is decorated",
+                          TRUE,
+                          G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
+  obj_props[PROP_FULLSCREEN] =
+    g_param_spec_boolean ("fullscreen",
+                          "Fullscreen",
+                          "Whether window is fullscreened",
+                          FALSE,
+                          G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
+  obj_props[PROP_MAXIMIZED_HORIZONTALLY] =
+    g_param_spec_boolean ("maximized-horizontally",
+                          "Maximized horizontally",
+                          "Whether window is maximized horizontally",
+                          FALSE,
+                          G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
+  obj_props[PROP_MAXIMIZED_VERTICALLY] =
+    g_param_spec_boolean ("maximized-vertically",
+                          "Maximizing vertically",
+                          "Whether window is maximized vertically",
+                          FALSE,
+                          G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
+  obj_props[PROP_MINIMIZED] =
+    g_param_spec_boolean ("minimized",
+                          "Minimizing",
+                          "Whether window is minimized",
+                          FALSE,
+                          G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
+  obj_props[PROP_WINDOW_TYPE] =
+    g_param_spec_enum ("window-type",
+                       "Window Type",
+                       "The type of the window",
+                       META_TYPE_WINDOW_TYPE,
+                       META_WINDOW_NORMAL,
+                       G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
+  obj_props[PROP_USER_TIME] =
+    g_param_spec_uint ("user-time",
+                       "User time",
+                       "Timestamp of last user interaction",
+                       0,
+                       G_MAXUINT,
+                       0,
+                       G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
+  obj_props[PROP_DEMANDS_ATTENTION] =
+    g_param_spec_boolean ("demands-attention",
+                          "Demands Attention",
+                          "Whether the window has _NET_WM_STATE_DEMANDS_ATTENTION set",
+                          FALSE,
+                          G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
+  obj_props[PROP_URGENT] =
+    g_param_spec_boolean ("urgent",
+                          "Urgent",
+                          "Whether the urgent flag of WM_HINTS is set",
+                          FALSE,
+                          G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
+  obj_props[PROP_SKIP_TASKBAR] =
+    g_param_spec_boolean ("skip-taskbar",
+                          "Skip taskbar",
+                          "Whether the skip-taskbar flag of WM_HINTS is set",
+                          FALSE,
+                          G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
+  obj_props[PROP_MUTTER_HINTS] =
+    g_param_spec_string ("mutter-hints",
+                         "_MUTTER_HINTS",
+                         "Contents of the _MUTTER_HINTS property of this window",
+                         NULL,
+                         G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
+  obj_props[PROP_APPEARS_FOCUSED] =
+    g_param_spec_boolean ("appears-focused",
+                          "Appears focused",
+                          "Whether the window is drawn as being focused",
+                          FALSE,
+                          G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
+  obj_props[PROP_RESIZEABLE] =
+    g_param_spec_boolean ("resizeable",
+                          "Resizeable",
+                          "Whether the window can be resized",
+                          FALSE,
+                          G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
+  obj_props[PROP_ABOVE] =
+    g_param_spec_boolean ("above",
+                          "Above",
+                          "Whether the window is shown as always-on-top",
+                          FALSE,
+                          G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
+  obj_props[PROP_WM_CLASS] =
+    g_param_spec_string ("wm-class",
+                         "WM_CLASS",
+                         "Contents of the WM_CLASS property of this window",
+                         NULL,
+                         G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
+  obj_props[PROP_GTK_APPLICATION_ID] =
+    g_param_spec_string ("gtk-application-id",
+                         "_GTK_APPLICATION_ID",
+                         "Contents of the _GTK_APPLICATION_ID property of this window",
+                         NULL,
+                         G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
+  obj_props[PROP_GTK_UNIQUE_BUS_NAME] =
+    g_param_spec_string ("gtk-unique-bus-name",
+                         "_GTK_UNIQUE_BUS_NAME",
+                         "Contents of the _GTK_UNIQUE_BUS_NAME property of this window",
+                         NULL,
+                         G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
+  obj_props[PROP_GTK_APPLICATION_OBJECT_PATH] =
+    g_param_spec_string ("gtk-application-object-path",
+                         "_GTK_APPLICATION_OBJECT_PATH",
+                         "Contents of the _GTK_APPLICATION_OBJECT_PATH property of this window",
+                         NULL,
+                         G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
+  obj_props[PROP_GTK_WINDOW_OBJECT_PATH] =
+    g_param_spec_string ("gtk-window-object-path",
+                         "_GTK_WINDOW_OBJECT_PATH",
+                         "Contents of the _GTK_WINDOW_OBJECT_PATH property of this window",
+                         NULL,
+                         G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
+  obj_props[PROP_GTK_APP_MENU_OBJECT_PATH] =
+    g_param_spec_string ("gtk-app-menu-object-path",
+                         "_GTK_APP_MENU_OBJECT_PATH",
+                         "Contents of the _GTK_APP_MENU_OBJECT_PATH property of this window",
+                         NULL,
+                         G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
+  obj_props[PROP_GTK_MENUBAR_OBJECT_PATH] =
+    g_param_spec_string ("gtk-menubar-object-path",
+                         "_GTK_MENUBAR_OBJECT_PATH",
+                         "Contents of the _GTK_MENUBAR_OBJECT_PATH property of this window",
+                         NULL,
+                         G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
+  obj_props[PROP_ON_ALL_WORKSPACES] =
+    g_param_spec_boolean ("on-all-workspaces",
+                          "On all workspaces",
+                          "Whether the window is set to appear on all workspaces",
+                          FALSE,
+                          G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
+
+  obj_props[PROP_IS_ALIVE] =
+    g_param_spec_boolean ("is-alive",
+                          "Is alive",
+                          "Whether the window responds to pings",
+                          TRUE,
+                          G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
+
+  obj_props[PROP_DISPLAY] =
+    g_param_spec_object ("display",
+                         "Display",
+                         "The display the window is attached to",
+                         META_TYPE_DISPLAY,
+                         G_PARAM_CONSTRUCT_ONLY | G_PARAM_READWRITE);
+
+  obj_props[PROP_EFFECT] =
+    g_param_spec_int ("effect",
+                      "Compositor effect",
+                      "The compositor effect",
+                      META_COMP_EFFECT_CREATE,
+                      META_COMP_EFFECT_NONE,
+                      META_COMP_EFFECT_NONE,
+                      G_PARAM_CONSTRUCT_ONLY | G_PARAM_READWRITE);
+
+  obj_props[PROP_SURFACE] =
+    g_param_spec_pointer ("surface",
+                          "Surface",
+                          "The corresponding Wayland surface",
+                         G_PARAM_CONSTRUCT_ONLY | G_PARAM_READABLE);
+
+  obj_props[PROP_XWINDOW] =
+    g_param_spec_ulong ("xwindow",
+                        "X Window",
+                        "The corresponding X Window",
+                        0, G_MAXULONG, 0,
+                        G_PARAM_CONSTRUCT_ONLY | G_PARAM_READWRITE);
+
+  g_object_class_install_properties (object_class, PROP_LAST, obj_props);
+
+  window_signals[WORKSPACE_CHANGED] =
+    g_signal_new ("workspace-changed",
+                  G_TYPE_FROM_CLASS (object_class),
+                  G_SIGNAL_RUN_LAST,
+                  0,
+                  NULL, NULL, NULL,
+                  G_TYPE_NONE, 0);
+
+  window_signals[FOCUS] =
+    g_signal_new ("focus",
+                  G_TYPE_FROM_CLASS (object_class),
+                  G_SIGNAL_RUN_LAST,
+                  0,
+                  NULL, NULL, NULL,
+                  G_TYPE_NONE, 0);
+
+  window_signals[RAISED] =
+    g_signal_new ("raised",
+                  G_TYPE_FROM_CLASS (object_class),
+                  G_SIGNAL_RUN_LAST,
+                  0,
+                  NULL, NULL, NULL,
+                  G_TYPE_NONE, 0);
+
+  window_signals[UNMANAGING] =
+    g_signal_new ("unmanaging",
+                  G_TYPE_FROM_CLASS (object_class),
+                  G_SIGNAL_RUN_LAST,
+                  0,
+                  NULL, NULL, NULL,
+                  G_TYPE_NONE, 0);
+
+  window_signals[UNMANAGED] =
+    g_signal_new ("unmanaged",
+                  G_TYPE_FROM_CLASS (object_class),
+                  G_SIGNAL_RUN_LAST,
+                  0,
+                  NULL, NULL, NULL,
+                  G_TYPE_NONE, 0);
+
+  /**
+   * MetaWindow::position-changed:
+   * @window: a #MetaWindow
+   *
+   * This is emitted when the position of a window might
+   * have changed. Specifically, this is emitted when the
+   * position of the toplevel window has changed, or when
+   * the position of the client window has changed.
+   */
+  window_signals[POSITION_CHANGED] =
+    g_signal_new ("position-changed",
+                  G_TYPE_FROM_CLASS (object_class),
+                  G_SIGNAL_RUN_LAST,
+                  0,
+                  NULL, NULL, NULL,
+                  G_TYPE_NONE, 0);
+
+  /**
+   * MetaWindow::shown:
+   * @window: a #MetaWindow
+   *
+   * This is emitted after a window has been shown.
+   */
+  window_signals[SHOWN] =
+    g_signal_new ("shown",
+                  G_TYPE_FROM_CLASS (object_class),
+                  G_SIGNAL_RUN_LAST,
+                  0,
+                  NULL, NULL, NULL,
+                  G_TYPE_NONE, 0);
+
+  /**
+   * MetaWindow::size-changed:
+   * @window: a #MetaWindow
+   *
+   * This is emitted when the size of a window might
+   * have changed. Specifically, this is emitted when the
+   * size of the toplevel window has changed, or when the
+   * size of the client window has changed.
+   */
+  window_signals[SIZE_CHANGED] =
+    g_signal_new ("size-changed",
+                  G_TYPE_FROM_CLASS (object_class),
+                  G_SIGNAL_RUN_LAST,
+                  0,
+                  NULL, NULL, NULL,
+                  G_TYPE_NONE, 0);
+}
+
+static void
+meta_window_init (MetaWindow *window)
+{
+  window->stamp = next_window_stamp++;
+  meta_prefs_add_listener (prefs_changed_callback, window);
+  window->is_alive = TRUE;
 }
 
 void
