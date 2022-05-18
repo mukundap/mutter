@@ -47,6 +47,8 @@
 #include "wayland/meta-wayland-subsurface.h"
 #include "wayland/meta-wayland-tablet-manager.h"
 #include "wayland/meta-wayland-xdg-foreign.h"
+#include "wayland/meta-window-wayland.h"
+#include "wayland/meta-window-xwayland.h"
 #include "wayland/meta-xwayland-grab-keyboard.h"
 #include "wayland/meta-xwayland-private.h"
 #include "wayland/meta-xwayland.h"
@@ -143,7 +145,18 @@ void
 meta_wayland_compositor_set_input_focus (MetaWaylandCompositor *compositor,
                                          MetaWindow            *window)
 {
-  MetaWaylandSurface *surface = window ? window->surface : NULL;
+  MetaWaylandSurface *surface = NULL;
+
+  if (meta_is_wayland_compositor ())
+    {
+      MetaWindowWayland *wl_window = META_WINDOW_WAYLAND (window);
+      surface = wl_window ? wl_window->surface : NULL;
+    }
+  else
+    {
+      MetaWindowXwayland *wl_window = META_WINDOW_XWAYLAND (window);
+      surface = wl_window ? wl_window->surface : NULL;
+    }
 
   meta_wayland_seat_set_input_focus (compositor->seat, surface);
 }

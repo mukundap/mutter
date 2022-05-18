@@ -40,6 +40,7 @@
 #include "wayland/meta-wayland-region.h"
 #include "wayland/meta-wayland-seat.h"
 #include "wayland/meta-wayland-surface.h"
+#include "wayland/meta-window-wayland.h"
 #include "wayland/meta-xwayland.h"
 
 #include "pointer-constraints-unstable-v1-server-protocol.h"
@@ -574,7 +575,8 @@ meta_wayland_pointer_constraint_maybe_remove_for_seat (MetaWaylandSeat *seat,
 static void
 meta_wayland_pointer_constraint_maybe_enable_for_window (MetaWindow *window)
 {
-  MetaWaylandSurface *surface = window->surface;
+  MetaWindowWayland *wl_window = META_WINDOW_WAYLAND (window);
+  MetaWaylandSurface *surface = wl_window->surface;
   MetaWaylandSurfacePointerConstraintsData *surface_data;
   GList *l;
 

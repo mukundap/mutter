@@ -37,6 +37,7 @@
 #include "core/meta-workspace-manager-private.h"
 #include "meta/meta-x11-errors.h"
 #include "wayland/meta-wayland-data-device.h"
+#include "wayland/meta-window-xwayland.h"
 #include "wayland/meta-xwayland-private.h"
 #include "wayland/meta-xwayland-dnd-private.h"
 #include "wayland/meta-xwayland.h"
@@ -723,6 +724,7 @@ pick_drop_surface (MetaWaylandCompositor *compositor,
   MetaWorkspaceManager *workspace_manager = display->workspace_manager;
   MetaWorkspace *workspace = workspace_manager->active_workspace;
   MetaWindow *focus_window = NULL;
+  MetaWindowXwayland *xwayland_window = NULL;
   graphene_point_t pos;
 
   clutter_event_get_coords (event, &pos.x, &pos.y);
@@ -730,7 +732,9 @@ pick_drop_surface (MetaWaylandCompositor *compositor,
                                                                workspace,
                                                                NULL,
                                                                pos.x, pos.y);
-  return focus_window ? focus_window->surface : NULL;
+  xwayland_window = META_WINDOW_XWAYLAND (focus_window);
+
+  return xwayland_window ? xwayland_window->surface : NULL;
 }
 
 static void

@@ -29,6 +29,16 @@ G_BEGIN_DECLS
 G_DECLARE_FINAL_TYPE (MetaWindowXwayland, meta_window_xwayland,
                       META, WINDOW_XWAYLAND, MetaWindowX11)
 
+struct _MetaWindowXwayland
+{
+  MetaWindowX11 parent;
+
+  MetaWaylandSurface *surface;
+
+  gboolean xwayland_may_grab_keyboard;
+  int freeze_count;
+};
+
 G_END_DECLS
 
 #endif

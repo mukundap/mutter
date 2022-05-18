@@ -169,7 +169,6 @@ struct _MetaWindow
   MetaLogicalMonitor *monitor;
   MetaWorkspace *workspace;
   MetaWindowClientType client_type;
-  MetaWaylandSurface *surface;
   Window xwindow;
   /* may be NULL! not all windows get decorated */
   MetaFrame *frame;

@@ -38,7 +38,12 @@
 
 #ifdef HAVE_WAYLAND
 #include "compositor/meta-surface-actor-wayland.h"
+#include "wayland/meta-window-wayland.h"
 #include "wayland/meta-wayland-surface.h"
+#endif
+
+#ifdef HAVE_XWAYLAND
+#include "wayland/meta-window-xwayland.h"
 #endif
 
 typedef enum
@@ -387,16 +392,28 @@ init_surface_actor (MetaWindowActor *self)
   MetaWindowActorPrivate *priv =
     meta_window_actor_get_instance_private (self);
   MetaWindow *window = priv->window;
-  MetaSurfaceActor *surface_actor;
-
+  MetaSurfaceActor *surface_actor = NULL;
   if (!meta_is_wayland_compositor ())
     surface_actor = meta_surface_actor_x11_new (window);
-#ifdef HAVE_WAYLAND
-  else if (window->surface)
-    surface_actor = meta_wayland_surface_get_actor (window->surface);
-#endif
   else
-    surface_actor = NULL;
+    {
+#ifdef HAVE_XWAYLAND
+      if (G_TYPE_CHECK_INSTANCE_TYPE (window, META_TYPE_WINDOW_XWAYLAND))
+        {
+          MetaWindowXwayland *wl_window = META_WINDOW_XWAYLAND (window);
+          if (wl_window->surface)
+            surface_actor = meta_wayland_surface_get_actor (wl_window->surface);
+        }
+#endif
+#ifdef HAVE_WAYLAND
+      if (G_TYPE_CHECK_INSTANCE_TYPE (window, META_TYPE_WINDOW_WAYLAND))
+        {
+          MetaWindowWayland *wl_window = META_WINDOW_WAYLAND (window);
+          if (wl_window->surface)
+            surface_actor = meta_wayland_surface_get_actor (wl_window->surface);
+        }
+#endif
+    }
 
   if (surface_actor)
     meta_window_actor_assign_surface_actor (self, surface_actor);

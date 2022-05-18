@@ -41,6 +41,7 @@
 #include "meta/util.h"
 #include "wayland/meta-wayland-private.h"
 #include "wayland/meta-wayland-types.h"
+#include "wayland/meta-window-wayland.h"
 
 struct _MetaWaylandClient
 {
@@ -291,12 +292,14 @@ meta_wayland_client_owns_window (MetaWaylandClient *client,
                                  MetaWindow        *window)
 {
   MetaWaylandSurface *surface;
+  MetaWindowWayland *wl_window;
 
   g_return_val_if_fail (meta_is_wayland_compositor (), FALSE);
   g_return_val_if_fail (client->subprocess != NULL, FALSE);
   g_return_val_if_fail (client->process_running, FALSE);
 
-  surface = window->surface;
+  wl_window = META_WINDOW_WAYLAND (window);
+  surface = wl_window->surface;
   if (surface == NULL)
     return FALSE;
 

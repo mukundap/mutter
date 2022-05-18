@@ -81,9 +81,14 @@
 #ifdef HAVE_WAYLAND
 #include "compositor/meta-compositor-native.h"
 #include "compositor/meta-compositor-server.h"
+#include "wayland/meta-window-wayland.h"
 #include "wayland/meta-xwayland-private.h"
 #include "wayland/meta-wayland-tablet-seat.h"
 #include "wayland/meta-wayland-tablet-pad.h"
+#endif
+
+#ifdef HAVE_XWAYLAND
+#include "wayland/meta-window-xwayland.h"
 #endif
 
 #ifdef HAVE_NATIVE_BACKEND
@@ -1438,8 +1443,17 @@ meta_display_sync_wayland_input_focus (MetaDisplay *display)
     focus_window = NULL;
   else if (clutter_stage_get_grab_actor (CLUTTER_STAGE (stage)))
     focus_window = NULL;
-  else if (display->focus_window && display->focus_window->surface)
-    focus_window = display->focus_window;
+  else if (display->focus_window)
+    if (display->focus_window->client_type == META_WINDOW_CLIENT_TYPE_WAYLAND)
+      {
+        MetaWindowWayland *wl_window = META_WINDOW_WAYLAND (display->focus_window);
+        focus_window = wl_window->surface ? focus_window : NULL;
+      }
+    else
+      {
+        MetaWindowXwayland *wl_window = META_WINDOW_XWAYLAND (display->focus_window);
+        focus_window = wl_window->surface ? focus_window : NULL;
+      }
   else
     meta_topic (META_DEBUG_FOCUS, "Focus change has no effect, because there is no matching wayland surface");
 

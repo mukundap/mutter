@@ -27,25 +27,19 @@
 #include "x11/xprops.h"
 #include "wayland/meta-window-xwayland.h"
 #include "wayland/meta-wayland.h"
+#include "wayland/meta-wayland-surface.h"
 
 enum
 {
   PROP_0,
 
   PROP_XWAYLAND_MAY_GRAB_KEYBOARD,
+  PROP_SURFACE,
 
   PROP_LAST
 };
 
 static GParamSpec *obj_props[PROP_LAST];
-
-struct _MetaWindowXwayland
-{
-  MetaWindowX11 parent;
-
-  gboolean xwayland_may_grab_keyboard;
-  int freeze_count;
-};
 
 struct _MetaWindowXwaylandClass
 {
@@ -251,6 +245,9 @@ meta_window_xwayland_get_property (GObject    *object,
     case PROP_XWAYLAND_MAY_GRAB_KEYBOARD:
       g_value_set_boolean (value, window->xwayland_may_grab_keyboard);
       break;
+    case PROP_SURFACE:
+      g_value_set_object (value, window->surface);
+      break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
@@ -269,6 +266,9 @@ meta_window_xwayland_set_property (GObject      *object,
     {
     case PROP_XWAYLAND_MAY_GRAB_KEYBOARD:
       window->xwayland_may_grab_keyboard = g_value_get_boolean (value);
+      break;
+    case PROP_SURFACE:
+      window->surface = g_value_get_object (value);
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -300,6 +300,13 @@ meta_window_xwayland_class_init (MetaWindowXwaylandClass *klass)
                           "Whether the client may use Xwayland keyboard grabs on this window",
                           FALSE,
                           G_PARAM_READWRITE);
+
+  obj_props[PROP_SURFACE] =
+    g_param_spec_object ("surface",
+                         "Surface",
+                         "The corresponding Wayland surface",
+                         META_TYPE_WAYLAND_SURFACE,
+                         G_PARAM_CONSTRUCT_ONLY | G_PARAM_READWRITE);
 
   g_object_class_install_properties (gobject_class, PROP_LAST, obj_props);
 }

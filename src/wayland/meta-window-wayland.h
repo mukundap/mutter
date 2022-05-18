@@ -36,6 +36,27 @@ G_DECLARE_FINAL_TYPE (MetaWindowWayland, meta_window_wayland,
                       META, WINDOW_WAYLAND,
                       MetaWindow)
 
+struct _MetaWindowWayland
+{
+  MetaWindow parent;
+
+  int geometry_scale;
+
+  MetaWaylandSurface *surface;
+
+  GList *pending_configurations;
+  gboolean has_pending_state_change;
+
+  gboolean has_last_sent_configuration;
+  MetaRectangle last_sent_rect;
+  int last_sent_rel_x;
+  int last_sent_rel_y;
+  int last_sent_geometry_scale;
+  MetaGravity last_sent_gravity;
+
+  gboolean has_been_shown;
+};
+
 MetaWindow * meta_window_wayland_new       (MetaDisplay        *display,
                                             MetaWaylandSurface *surface);
 
