@@ -104,14 +104,11 @@ typedef struct _ClutterShader                   ClutterShader; /* deprecated */
 /**
  * ClutterPaintVolume:
  *
- * #ClutterPaintVolume is an opaque structure
- * whose members cannot be directly accessed.
+ * A #ClutterPaintVolume represents a bounding volume whose internal 
+ * representation isn't defined but can be set and queried in terms
+ * of an axis aligned bounding box.
  *
- * A #ClutterPaintVolume represents an
- * a bounding volume whose internal representation isn't defined but
- * can be set and queried in terms of an axis aligned bounding box.
- *
- * A #ClutterPaintVolume for a #ClutterActor
+ * A #ClutterPaintVolume for a [class@Actor]
  * is defined to be relative from the current actor modelview matrix.
  *
  * Other internal representation and methods for describing the
@@ -128,8 +125,10 @@ typedef struct _ClutterPaintVolume      ClutterPaintVolume;
  * @x2: X coordinate of the bottom right corner
  * @y2: Y coordinate of the bottom right corner
  *
- * Bounding box of an actor. The coordinates of the top left and right bottom
- * corners of an actor. The coordinates of the two points are expressed in
+ * Bounding box of an actor. 
+ * 
+ * The coordinates of the top left and right bottom corners
+ * of an actor. The coordinates of the two points are expressed in
  * pixels with sub-pixel precision
  */
 struct _ClutterActorBox
@@ -151,9 +150,9 @@ struct _ClutterActorBox
  * A simple macro for initializing a #ClutterActorBox when declaring
  * it, e.g.:
  *
- * |[
+ * ```c
  *   ClutterActorBox box = CLUTTER_ACTOR_BOX_INIT (0, 0, 400, 600);
- * ]|
+ * ```
  *
  * Since: 1.10
  */
@@ -165,9 +164,9 @@ struct _ClutterActorBox
  * A simple macro for initializing a #ClutterActorBox to 0 when
  * declaring it, e.g.:
  *
- * |[
+ * ```c
  *   ClutterActorBox box = CLUTTER_ACTOR_BOX_INIT_ZERO;
- * ]|
+ * ```
  *
  * Since: 1.12
  */
@@ -179,9 +178,9 @@ struct _ClutterActorBox
  * A simple macro for creating a #ClutterActorBox with a size of -1 when
  * declaring it, e.g.:
  *
- * |[
+ * ```c
  *   ClutterActorBox box = CLUTTER_ACTOR_BOX_UNINITIALIZED;
- * ]|
+ * ```
  */
 
 
