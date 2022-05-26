@@ -20,7 +20,11 @@
 #define META_CURSOR_SPRITE_XCURSOR_H
 
 #include <glib-object.h>
+#ifdef HAVE_X11_CLIENT
 #include <X11/Xcursor/Xcursor.h>
+#else
+#include "core/xcursor.h"
+#endif
 
 #include "backends/meta-cursor.h"
 #include "meta/types.h"
@@ -39,7 +43,9 @@ MetaCursor meta_cursor_sprite_xcursor_get_cursor (MetaCursorSpriteXcursor *sprit
 
 XcursorImage * meta_cursor_sprite_xcursor_get_current_image (MetaCursorSpriteXcursor *sprite_xcursor);
 
+#ifdef HAVE_X11_CLIENT
 Cursor meta_create_x_cursor (Display    *xdisplay,
                              MetaCursor  cursor);
+#endif
 
 #endif /* META_CURSOR_SPRITE_XCURSOR_H */

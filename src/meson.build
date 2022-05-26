@@ -534,6 +534,14 @@ if have_remote_desktop
 endif
 
 if have_wayland
+
+  if not have_x11_client
+    mutter_sources += [
+      'core/xcursor.c',
+      'core/xcursor.h',
+    ]
+  endif
+  
   mutter_sources += [
     'compositor/meta-surface-actor-wayland.c',
     'compositor/meta-surface-actor-wayland.h',
