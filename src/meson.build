@@ -17,7 +17,6 @@ mutter_pkg_deps = [
   gio_unix_dep,
   glib_dep,
   gsettings_desktop_schemas_dep,
-  gtk3_dep,
   pango_dep,
 ]
 
@@ -81,6 +80,12 @@ endif
 if have_introspection
   mutter_pkg_private_deps += [
     gobject_introspection_dep,
+  ]
+endif
+
+if have_x11_client
+  mutter_pkg_deps += [
+    gtk3_dep,
   ]
 endif
 
@@ -1104,8 +1109,6 @@ if have_introspection
     includes: [
       'GObject-2.0',
       'GDesktopEnums-3.0',
-      'Gdk-3.0',
-      'Gtk-3.0',
       'xlib-2.0',
       'xfixes-4.0',
       libmutter_cogl_gir[0],

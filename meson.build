@@ -102,7 +102,6 @@ mutter_installed_tests_libexecdir = join_paths(
 
 m_dep = cc.find_library('m', required: true)
 graphene_dep = dependency('graphene-gobject-1.0', version: graphene_req)
-gtk3_dep = dependency('gtk+-3.0', version: gtk3_req)
 gdk_pixbuf_dep = dependency('gdk-pixbuf-2.0')
 pango_dep = dependency('pango', version: pango_req)
 cairo_dep = dependency('cairo', version: cairo_req)
@@ -140,6 +139,8 @@ if not have_wayland and not have_x11
 endif
 
 if have_x11_client
+  gtk3_dep = dependency('gtk+-3.0', version: gtk3_req)
+
   x11_dep = dependency('x11')
   xcomposite_dep = dependency('xcomposite', version: xcomposite_req)
   xcursor_dep = dependency('xcursor')
