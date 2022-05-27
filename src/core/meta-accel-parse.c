@@ -179,7 +179,7 @@ accelerator_parse (const gchar         *accelerator,
                    MetaKeyCombo        *combo)
 {
   guint keyval, keycode;
-  MetaVirtualModifier mods;
+  ClutterModifierType mods;
   gint len;
 
   combo->keysym = 0;
@@ -202,40 +202,40 @@ accelerator_parse (const gchar         *accelerator,
               /* Primary is treated the same as Control */
               accelerator += 9;
               len -= 9;
-              mods |= META_VIRTUAL_CONTROL_MASK;
+              mods |= CLUTTER_CONTROL_MASK;
             }
           else if (len >= 9 && is_control (accelerator))
             {
               accelerator += 9;
               len -= 9;
-              mods |= META_VIRTUAL_CONTROL_MASK;
+              mods |= CLUTTER_CONTROL_MASK;
             }
           else if (len >= 7 && is_shift (accelerator))
             {
               accelerator += 7;
               len -= 7;
-              mods |= META_VIRTUAL_SHIFT_MASK;
+              mods |= CLUTTER_SHIFT_MASK;
             }
           else if (len >= 6 && is_shft (accelerator))
             {
               accelerator += 6;
               len -= 6;
-              mods |= META_VIRTUAL_SHIFT_MASK;
+              mods |= CLUTTER_SHIFT_MASK;
             }
           else if (len >= 6 && is_ctrl (accelerator))
             {
               accelerator += 6;
               len -= 6;
-              mods |= META_VIRTUAL_CONTROL_MASK;
+              mods |= CLUTTER_CONTROL_MASK;
             }
           else if (len >= 6 && is_modx (accelerator))
             {
               static const guint mod_vals[] = {
-                META_VIRTUAL_ALT_MASK,
-                META_VIRTUAL_MOD2_MASK,
-                META_VIRTUAL_MOD3_MASK,
-                META_VIRTUAL_MOD4_MASK,
-                META_VIRTUAL_MOD5_MASK,
+                CLUTTER_MOD1_MASK,
+                CLUTTER_MOD2_MASK,
+                CLUTTER_MOD3_MASK,
+                CLUTTER_MOD4_MASK,
+                CLUTTER_MOD5_MASK,
               };
 
               len -= 6;
@@ -247,31 +247,31 @@ accelerator_parse (const gchar         *accelerator,
             {
               accelerator += 5;
               len -= 5;
-              mods |= META_VIRTUAL_CONTROL_MASK;
+              mods |= CLUTTER_CONTROL_MASK;
             }
           else if (len >= 5 && is_alt (accelerator))
             {
               accelerator += 5;
               len -= 5;
-              mods |= META_VIRTUAL_ALT_MASK;
+              mods |= CLUTTER_MOD1_MASK;
             }
           else if (len >= 6 && is_meta (accelerator))
             {
               accelerator += 6;
               len -= 6;
-              mods |= META_VIRTUAL_META_MASK;
+              mods |= CLUTTER_META_MASK;
             }
           else if (len >= 7 && is_hyper (accelerator))
             {
               accelerator += 7;
               len -= 7;
-              mods |= META_VIRTUAL_HYPER_MASK;
+              mods |= CLUTTER_HYPER_MASK;
             }
           else if (len >= 7 && is_super (accelerator))
             {
               accelerator += 7;
               len -= 7;
-              mods |= META_VIRTUAL_SUPER_MASK;
+              mods |= CLUTTER_SUPER_MASK;
             }
           else
             {
@@ -340,7 +340,7 @@ meta_parse_accelerator (const char   *accel,
 
 gboolean
 meta_parse_modifier (const char          *accel,
-                     MetaVirtualModifier *mask)
+                     ClutterModifierType *mask)
 {
   MetaKeyCombo combo = { 0 };
 
