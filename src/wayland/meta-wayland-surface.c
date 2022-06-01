@@ -2257,3 +2257,12 @@ meta_wayland_surface_can_scanout_untransformed (MetaWaylandSurface *surface,
 
   return TRUE;
 }
+
+gboolean
+meta_wayland_surface_is_xwayland (MetaWaylandSurface *surface)
+{
+  MetaWaylandCompositor *compositor = meta_wayland_compositor_get_default ();
+  MetaXWaylandManager *manager = &compositor->xwayland_manager;
+
+  return wl_resource_get_client (surface->resource) == manager->client;
+}
