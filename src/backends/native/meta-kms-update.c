@@ -38,6 +38,8 @@ struct _MetaKmsUpdate
   GList *mode_sets;
   GList *plane_assignments;
   GList *connector_updates;
+  GList *crtc_degammas;
+  GList *crtc_ctms;
   GList *crtc_gammas;
 
   MetaKmsCustomPageFlip *custom_page_flip;
@@ -328,6 +330,22 @@ meta_kms_update_set_underscanning (MetaKmsUpdate    *update,
   connector_update->underscanning.vborder = vborder;
 }
 
+void meta_kms_update_set_colorspace (MetaKmsUpdate    *update,
+                                      MetaKmsConnector *connector,
+                                      uint16_t target_colorspace)
+
+{
+  MetaKmsConnectorUpdate *connector_update;
+
+  g_assert (!meta_kms_update_is_locked (update));
+  g_assert (meta_kms_connector_get_device (connector) == update->device);
+  g_assert (!update->power_save);
+
+  connector_update = ensure_connector_update (update, connector);
+  connector_update->target_colorspace = target_colorspace;
+  connector_update->colorspace_changed = TRUE;
+}
+
 void
 meta_kms_update_unset_underscanning (MetaKmsUpdate    *update,
                                      MetaKmsConnector *connector)
@@ -354,6 +372,96 @@ meta_kms_update_set_privacy_screen (MetaKmsUpdate    *update,
   connector_update = ensure_connector_update (update, connector);
   connector_update->privacy_screen.has_update = TRUE;
   connector_update->privacy_screen.is_enabled = enabled;
+}
+
+void
+meta_kms_crtc_degamma_free (MetaKmsCrtcDegamma *degamma)
+{
+  g_free (degamma->red);
+  g_free (degamma->green);
+  g_free (degamma->blue);
+  g_free (degamma);
+}
+
+MetaKmsCrtcDegamma *
+meta_kms_crtc_degamma_new (MetaKmsCrtc    *crtc,
+                           int             size,
+                           const uint16_t *red,
+                           const uint16_t *green,
+                           const uint16_t *blue)
+{
+  MetaKmsCrtcDegamma *degamma;
+
+  degamma = g_new0 (MetaKmsCrtcDegamma, 1);
+  *degamma = (MetaKmsCrtcDegamma) {
+    .crtc = crtc,
+    .size = size,
+    .red = g_memdup2 (red, size * sizeof *red),
+    .green = g_memdup2 (green, size * sizeof *green),
+    .blue = g_memdup2 (blue, size * sizeof *blue),
+  };
+
+  return degamma;
+}
+
+void
+meta_kms_update_set_crtc_degamma (MetaKmsUpdate  *update,
+                                  MetaKmsCrtc    *crtc,
+                                  int             size,
+                                  const uint16_t *red,
+                                  const uint16_t *green,
+                                  const uint16_t *blue)
+{
+  MetaKmsCrtcDegamma *degamma;
+
+  g_assert (!meta_kms_update_is_locked (update));
+  g_assert (meta_kms_crtc_get_device (crtc) == update->device);
+  g_assert (!update->power_save);
+
+  degamma = meta_kms_crtc_degamma_new (crtc, size, red, green, blue);
+
+  update->crtc_degammas = g_list_prepend (update->crtc_degammas, degamma);
+}
+
+void
+meta_kms_crtc_ctm_free (MetaKmsCrtcCtm *ctm)
+{
+  g_free (ctm->matrix);
+  g_free (ctm);
+}
+
+MetaKmsCrtcCtm *
+meta_kms_crtc_ctm_new (MetaKmsCrtc    *crtc,
+                       int             size,
+                       const uint64_t *matrix)
+{
+  MetaKmsCrtcCtm *ctm;
+
+  ctm = g_new0 (MetaKmsCrtcCtm, 1);
+  *ctm = (MetaKmsCrtcCtm) {
+    .crtc = crtc,
+    .size = size,
+    .matrix = g_memdup2 (matrix, size * sizeof *matrix),
+  };
+
+  return ctm;
+}
+
+void
+meta_kms_update_set_crtc_ctm (MetaKmsUpdate  *update,
+                              MetaKmsCrtc    *crtc,
+                              int size,
+                              const uint64_t *matrix)
+{
+  MetaKmsCrtcCtm *ctm;
+
+  g_assert (!meta_kms_update_is_locked (update));
+  g_assert (meta_kms_crtc_get_device (crtc) == update->device);
+  g_assert (!update->power_save);
+
+  ctm = meta_kms_crtc_ctm_new (crtc, size, matrix);
+
+  update->crtc_ctms = g_list_prepend (update->crtc_ctms, ctm);
 }
 
 void
@@ -636,6 +744,18 @@ meta_kms_update_get_connector_updates (MetaKmsUpdate *update)
 }
 
 GList *
+meta_kms_update_get_crtc_degammas (MetaKmsUpdate *update)
+{
+  return update->crtc_degammas;
+}
+
+GList *
+meta_kms_update_get_crtc_ctms (MetaKmsUpdate *update)
+{
+  return update->crtc_ctms;
+}
+
+GList *
 meta_kms_update_get_crtc_gammas (MetaKmsUpdate *update)
 {
   return update->crtc_gammas;
@@ -708,6 +828,8 @@ meta_kms_update_free (MetaKmsUpdate *update)
   g_list_free_full (update->page_flip_listeners,
                     (GDestroyNotify) meta_kms_page_flip_listener_free);
   g_list_free_full (update->connector_updates, g_free);
+  g_list_free_full (update->crtc_degammas, (GDestroyNotify) meta_kms_crtc_degamma_free);
+  g_list_free_full (update->crtc_ctms, (GDestroyNotify) meta_kms_crtc_ctm_free);
   g_list_free_full (update->crtc_gammas, (GDestroyNotify) meta_kms_crtc_gamma_free);
   g_clear_pointer (&update->custom_page_flip, meta_kms_custom_page_flip_free);
 

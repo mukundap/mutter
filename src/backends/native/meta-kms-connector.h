@@ -59,6 +59,7 @@ typedef struct _MetaKmsConnectorState
   gboolean hotplug_mode_update;
 
   MetaMonitorTransform panel_orientation_transform;
+  gboolean supports_colorspace;
 } MetaKmsConnectorState;
 
 META_EXPORT_TEST

@@ -26,6 +26,8 @@
 #include "backends/native/meta-kms-impl-device.h"
 #include "backends/native/meta-kms-mode.h"
 #include "backends/native/meta-kms-update-private.h"
+#include "backends/native/meta-kms-color-utility.h"
+#include "meta/meta-color-space.h"
 
 typedef struct _MetaKmsCrtcPropTable
 {
@@ -90,6 +92,107 @@ gboolean
 meta_kms_crtc_is_active (MetaKmsCrtc *crtc)
 {
   return crtc->current_state.is_active;
+}
+
+MetaKmsCrtcDegamma *
+meta_kms_crtc_get_degamma (MetaKmsCrtc *crtc)
+{
+  MetaKmsCrtcDegamma *degamma;
+  int degamma_lut_size = crtc->current_state.degamma.size;
+
+  degamma = g_malloc0 (degamma_lut_size * sizeof (MetaKmsCrtcDegamma *));
+  degamma->red = g_malloc0 (degamma_lut_size * sizeof (uint16_t *));
+  degamma->green = g_malloc0 (degamma_lut_size * sizeof (uint16_t *));
+  degamma->blue = g_malloc0 (degamma_lut_size * sizeof (uint16_t *));
+  degamma->size = degamma_lut_size;
+
+  GenerateSrgbDegammaLut (degamma);
+
+  return degamma;
+}
+
+MetaKmsCrtcCtm *
+meta_kms_crtc_get_ctm (MetaKmsCrtc *crtc,
+                       uint32_t src_cs,
+                       uint16_t dst_cs)
+{
+  MetaKmsCrtcCtm *ctm;
+
+  // CTM size is fixed globally
+  uint32_t ctm_size = 9;
+  ctm = g_malloc0 (ctm_size * sizeof (MetaKmsCrtcCtm *));
+  ctm->matrix = g_malloc0 (ctm_size * sizeof (uint64_t *));
+  ctm->size = ctm_size;
+
+  ColorSpace src, dst;
+  ColorSpace bt709, bt2020;
+
+  bt2020.white.x = 0.3127;
+  bt2020.white.y = 0.3290;
+  bt2020.white.luminance = 100.0;
+
+  bt2020.red.x = 0.708;
+  bt2020.red.y = 0.292;
+  bt2020.green.x = 0.170;
+  bt2020.green.y = 0.797;
+  bt2020.blue.x = 0.131;
+  bt2020.blue.y = 0.046;
+
+  bt709.white.x = 0.3127;
+  bt709.white.y = 0.3290;
+  bt709.white.luminance = 100.0;
+
+  bt709.red.x = 0.64;
+  bt709.red.y = 0.33;
+  bt709.green.x = 0.30;
+  bt709.green.y = 0.60;
+  bt709.blue.x = 0.15;
+  bt709.blue.y = 0.06;
+
+  // FIXME: default to bt709, need to handle other known color spaces
+  src = dst = bt709;
+
+  if (src_cs == META_CS_BT709)
+    src = bt709;
+  else if (src_cs == META_CS_BT2020)
+    src = bt2020;
+
+  if (dst_cs == META_CS_BT709)
+    dst = bt709;
+  else if (dst_cs == META_CS_BT2020)
+    dst = bt2020;
+
+  // GetCTMForSrcToDestColorSpace (bt709, bt2020, ctm);
+  GetCTMForSrcToDestColorSpace (src, dst, ctm);
+
+  return ctm;
+}
+
+MetaKmsCrtcGamma *
+meta_kms_crtc_get_gamma (MetaKmsCrtc *crtc)
+{
+  MetaKmsCrtcGamma *gamma;
+  int gamma_lut_size = crtc->current_state.gamma.size;
+  gamma_lut_size = 513;
+
+  gamma = g_malloc0 (gamma_lut_size * sizeof (MetaKmsCrtcGamma *));
+  gamma->red = g_malloc0 (gamma_lut_size * sizeof (uint16_t *));
+  gamma->green = g_malloc0 (gamma_lut_size * sizeof (uint16_t *));
+  gamma->blue = g_malloc0 (gamma_lut_size * sizeof (uint16_t *));
+  gamma->size = gamma_lut_size;
+
+  if (crtc->current_state.gamma_mode_type == META_KMS_CRTC_GAMMA_MODE_LOGARITHMIC)
+    {
+      // set_advance_gamma
+      create_unity_log_lut (crtc->current_state.segment_info, gamma);
+    }
+  else
+    {
+      // set_gamma
+      GenerateSrgbGammaLut (gamma);
+    }
+
+  return gamma;
 }
 
 static void
@@ -241,6 +344,33 @@ meta_kms_crtc_read_state (MetaKmsCrtc             *crtc,
                 ? "no"
                 : "yes");
 
+  // read colorspace properties
+  active_prop = &crtc->prop_table.props[META_KMS_CRTC_PROP_GAMMA_LUT_SIZE];
+  if (active_prop->prop_id)
+    {
+      active_idx = find_prop_idx (active_prop,
+                                  drm_props->props,
+                                  drm_props->count_props);
+      crtc->current_state.gamma.size = drm_props->prop_values[active_idx];
+    }
+  else
+    {
+      crtc->current_state.gamma.size = drm_crtc->gamma_size;
+    }
+
+  active_prop = &crtc->prop_table.props[META_KMS_CRTC_PROP_DEGAMMA_LUT_SIZE];
+  if (active_prop->prop_id)
+    {
+      active_idx = find_prop_idx (active_prop,
+                                  drm_props->props,
+                                  drm_props->count_props);
+      crtc->current_state.degamma.size = drm_props->prop_values[active_idx];
+    }
+  else
+    {
+      crtc->current_state.degamma.size = drm_crtc->gamma_size;
+    }
+
   return changes;
 }
 
@@ -361,6 +491,58 @@ parse_active (MetaKmsImplDevice  *impl_device,
   crtc->current_state.is_active = !!drm_prop_value;
 }
 
+static segment_data_t *
+get_segment_data (int fd,
+                  uint64_t blob_id, char *mode)
+{
+  drmModePropertyBlobPtr blob;
+  struct drm_color_lut_range *lut_range = NULL;
+  segment_data_t *info = NULL;
+
+  blob = drmModeGetPropertyBlob (fd, blob_id);
+
+  info = malloc (sizeof (segment_data_t));
+
+  lut_range = (struct drm_color_lut_range *) blob->data;
+  info->segment_count = blob->length / sizeof(lut_range[0]);
+  info->segment_data = malloc (sizeof (struct drm_color_lut_range) * info->segment_count);
+  info->entries_count = 0;
+  for (uint32_t i = 0; i < info->segment_count; i++) {
+    info->entries_count += lut_range[i].count;
+    info->segment_data[i] = lut_range[i];
+  }
+
+  drmModeFreePropertyBlob (blob);
+
+  return info;
+}
+
+static void
+parse_gamma_mode (MetaKmsImplDevice  *impl_device,
+                  MetaKmsProp        *prop,
+                  drmModePropertyPtr  drm_prop,
+                  uint64_t            drm_prop_value,
+                  gpointer            user_data)
+{
+  MetaKmsCrtc *crtc = user_data;
+  int fd;
+  fd = meta_kms_impl_device_get_fd (impl_device);
+
+  for (int i = 0; i < drm_prop->count_enums; i++)
+    {
+      if (strcmp (drm_prop->enums[i].name, "logarithmic gamma") == 0)
+      {
+        crtc->current_state.gamma_mode_type =
+                        META_KMS_CRTC_GAMMA_MODE_LOGARITHMIC;
+        crtc->current_state.gamma_mode_value = drm_prop->enums[i].value;
+
+        crtc->current_state.segment_info = get_segment_data (fd,
+                        drm_prop->enums[i].value, drm_prop->enums[i].name);
+        break;
+      }
+    }
+}
+
 static void
 init_proporties (MetaKmsCrtc       *crtc,
                  MetaKmsImplDevice *impl_device,
@@ -387,6 +569,32 @@ init_proporties (MetaKmsCrtc       *crtc,
         {
           .name = "GAMMA_LUT",
           .type = DRM_MODE_PROP_BLOB,
+        },
+      [META_KMS_CRTC_PROP_GAMMA_LUT_SIZE] =
+        {
+          .name = "GAMMA_LUT_SIZE",
+          .type = DRM_MODE_PROP_RANGE,
+        },
+      [META_KMS_CRTC_PROP_CTM] =
+        {
+          .name = "CTM",
+          .type = DRM_MODE_PROP_BLOB,
+        },
+      [META_KMS_CRTC_PROP_DEGAMMA_LUT] =
+        {
+          .name = "DEGAMMA_LUT",
+          .type = DRM_MODE_PROP_BLOB,
+        },
+      [META_KMS_CRTC_PROP_DEGAMMA_LUT_SIZE] =
+        {
+          .name = "DEGAMMA_LUT_SIZE",
+          .type = DRM_MODE_PROP_RANGE,
+        },
+      [META_KMS_CRTC_PROP_GAMMA_MODE] =
+        {
+          .name = "GAMMA_MODE",
+          .type = DRM_MODE_PROP_ENUM,
+          .parse = parse_gamma_mode,
         },
     }
   };

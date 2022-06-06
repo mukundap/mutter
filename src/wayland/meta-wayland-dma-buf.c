@@ -396,6 +396,12 @@ meta_wayland_dma_buf_realize_texture (MetaWaylandBuffer  *buffer,
     case DRM_FORMAT_ARGB16161616F:
       cogl_format = COGL_PIXEL_FORMAT_ARGB_FP_16161616_PRE;
       break;
+    case DRM_FORMAT_P010:
+      cogl_format = COGL_PIXEL_FORMAT_P010;
+      break;
+    case DRM_FORMAT_NV12:
+      cogl_format = COGL_PIXEL_FORMAT_NV12;
+      break;
     default:
       g_set_error (error, G_IO_ERROR,
                    G_IO_ERROR_FAILED,
@@ -590,9 +596,9 @@ meta_wayland_dma_buf_try_acquire_scanout (MetaWaylandDmaBufBuffer *dma_buf,
       return NULL;
     }
 
-  if (!meta_onscreen_native_is_buffer_scanout_compatible (onscreen,
+  /*if (!meta_onscreen_native_is_buffer_scanout_compatible (onscreen,
                                                           META_DRM_BUFFER (fb)))
-    return NULL;
+    return NULL;*/
 
   return COGL_SCANOUT (g_steal_pointer (&fb));
 #else
@@ -1367,6 +1373,8 @@ init_formats (MetaWaylandDmaBufManager *dma_buf_manager,
   add_format (dma_buf_manager, egl_display, DRM_FORMAT_XBGR16161616F);
   add_format (dma_buf_manager, egl_display, DRM_FORMAT_XRGB16161616F);
   add_format (dma_buf_manager, egl_display, DRM_FORMAT_ARGB16161616F);
+  add_format (dma_buf_manager, egl_display, DRM_FORMAT_P010);
+  add_format (dma_buf_manager, egl_display, DRM_FORMAT_NV12);
 
   init_format_table (dma_buf_manager);
 }
@@ -1388,7 +1396,7 @@ init_default_feedback (MetaWaylandDmaBufManager *dma_buf_manager)
                                               priority,
                                               flags);
   meta_wayland_dma_buf_feedback_add_tranche (dma_buf_manager->default_feedback,
-                                             tranche);
+		  			     tranche);
 }
 
 /**

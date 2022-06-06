@@ -92,6 +92,20 @@ static const CoglPixelFormatInfo format_info_table[] = {
     .bpp = { 0 },
   },
   {
+    .cogl_format = COGL_PIXEL_FORMAT_P010,
+    .format_str = "P010",
+    .n_planes = 2,
+    .aligned = 0,
+    .bpp = { 2 },
+  },
+  {
+    .cogl_format = COGL_PIXEL_FORMAT_NV12,
+    .format_str = "NV12",
+    .n_planes = 2,
+    .aligned = 0,
+    .bpp = { 2 },
+  },
+  {
     .cogl_format = COGL_PIXEL_FORMAT_G_8,
     .format_str = "G_8",
     .n_planes = 1,

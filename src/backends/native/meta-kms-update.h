@@ -116,6 +116,18 @@ void meta_kms_update_mode_set (MetaKmsUpdate *update,
                                GList         *connectors,
                                MetaKmsMode   *mode);
 
+void meta_kms_update_set_crtc_degamma (MetaKmsUpdate  *update,
+                                       MetaKmsCrtc    *crtc,
+                                       int             size,
+                                       const uint16_t *red,
+                                       const uint16_t *green,
+                                       const uint16_t *blue);
+
+void meta_kms_update_set_crtc_ctm (MetaKmsUpdate  *update,
+                                   MetaKmsCrtc    *crtc,
+                                   int size,
+                                   const uint64_t *matrix);
+
 void meta_kms_update_set_crtc_gamma (MetaKmsUpdate  *update,
                                      MetaKmsCrtc    *crtc,
                                      int             size,
@@ -163,6 +175,9 @@ void meta_kms_update_add_result_listener (MetaKmsUpdate             *update,
 void meta_kms_update_remove_result_listeners (MetaKmsUpdate             *update,
                                               MetaKmsResultListenerFunc  func,
                                               gpointer                   user_data);
+void meta_kms_update_set_colorspace (MetaKmsUpdate    *update,
+                                      MetaKmsConnector *connector,
+                                      uint16_t target_colorspace);
 
 static inline MetaFixed16
 meta_fixed_16_from_int (int16_t d)

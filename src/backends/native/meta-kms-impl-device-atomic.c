@@ -201,15 +201,32 @@ process_connector_update (MetaKmsImplDevice  *impl_device,
       meta_topic (META_DEBUG_KMS,
                   "[atomic] Toggling privacy screen to %d on connector %u (%s)",
                   connector_update->privacy_screen.is_enabled,
+		   meta_kms_connector_get_id (connector),
+		   meta_kms_impl_device_get_path (impl_device));
+
+      if (!add_connector_property (impl_device,
+			      connector, req,
+			      META_KMS_CONNECTOR_PROP_PRIVACY_SCREEN_SW_STATE,
+			      connector_update->privacy_screen.is_enabled,
+			      error))
+	return FALSE;
+    }
+
+  if (connector_update->colorspace_changed)
+    {
+      meta_topic (META_DEBUG_KMS,
+                  "[atomic] Setting colorspace on connector %u (%s)",
                   meta_kms_connector_get_id (connector),
                   meta_kms_impl_device_get_path (impl_device));
 
       if (!add_connector_property (impl_device,
                                    connector, req,
-                                   META_KMS_CONNECTOR_PROP_PRIVACY_SCREEN_SW_STATE,
-                                   connector_update->privacy_screen.is_enabled,
+                                   META_KMS_CONNECTOR_PROP_COLORSPACE,
+                                   0,
                                    error))
         return FALSE;
+
+      connector_update->colorspace_changed = FALSE;
     }
 
   return TRUE;
@@ -590,6 +607,96 @@ process_plane_assignment (MetaKmsImplDevice  *impl_device,
 }
 
 static gboolean
+process_crtc_degamma (MetaKmsImplDevice  *impl_device,
+                      MetaKmsUpdate      *update,
+                      drmModeAtomicReq   *req,
+                      GArray             *blob_ids,
+                      gpointer            update_entry,
+                      gpointer            user_data,
+                      GError            **error)
+{
+  MetaKmsCrtcDegamma *degamma = update_entry;
+  MetaKmsCrtc *crtc = degamma->crtc;
+  struct drm_color_lut drm_color_lut[degamma->size];
+  int i;
+  uint32_t color_lut_blob_id;
+
+  for (i = 0; i < degamma->size; i++)
+    {
+      drm_color_lut[i].red = degamma->red[i];
+      drm_color_lut[i].green = degamma->green[i];
+      drm_color_lut[i].blue = degamma->blue[i];
+    }
+
+  color_lut_blob_id = store_new_blob (impl_device,
+                                      blob_ids,
+                                      drm_color_lut,
+                                      sizeof drm_color_lut,
+                                      error);
+  if (!color_lut_blob_id)
+    return FALSE;
+
+  meta_topic (META_DEBUG_KMS,
+              "[atomic] Setting CRTC (%u, %s) degamma, size: %d",
+              meta_kms_crtc_get_id (crtc),
+              meta_kms_impl_device_get_path (impl_device),
+              degamma->size);
+
+  if (!add_crtc_property (impl_device,
+                          crtc, req,
+                          META_KMS_CRTC_PROP_DEGAMMA_LUT,
+                          color_lut_blob_id,
+                          error))
+    return FALSE;
+
+  return TRUE;
+}
+
+static gboolean
+process_crtc_ctm (MetaKmsImplDevice  *impl_device,
+                  MetaKmsUpdate      *update,
+                  drmModeAtomicReq   *req,
+                  GArray             *blob_ids,
+                  gpointer            update_entry,
+                  gpointer            user_data,
+                  GError            **error)
+{
+  MetaKmsCrtcCtm *ctm = update_entry;
+  MetaKmsCrtc *crtc = ctm->crtc;
+  struct drm_color_ctm drm_color_ctm;
+  int i;
+  uint32_t color_ctm_blob_id;
+
+  for (i = 0; i < ctm->size; i++)
+    {
+      drm_color_ctm.matrix[i] = ctm->matrix[i];
+    }
+
+  color_ctm_blob_id = store_new_blob (impl_device,
+                                      blob_ids,
+                                      &drm_color_ctm,
+                                      sizeof drm_color_ctm,
+                                      error);
+  if (!color_ctm_blob_id)
+    return FALSE;
+
+  meta_topic (META_DEBUG_KMS,
+              "[atomic] Setting CRTC (%u, %s) ctm, size: %d",
+              meta_kms_crtc_get_id (crtc),
+              meta_kms_impl_device_get_path (impl_device),
+              ctm->size);
+
+  if (!add_crtc_property (impl_device,
+                          crtc, req,
+                          META_KMS_CRTC_PROP_CTM,
+                          color_ctm_blob_id,
+                          error))
+    return FALSE;
+
+  return TRUE;
+}
+
+static gboolean
 process_crtc_gamma (MetaKmsImplDevice  *impl_device,
                     MetaKmsUpdate      *update,
                     drmModeAtomicReq   *req,
@@ -600,6 +707,7 @@ process_crtc_gamma (MetaKmsImplDevice  *impl_device,
 {
   MetaKmsCrtcGamma *gamma = update_entry;
   MetaKmsCrtc *crtc = gamma->crtc;
+  const MetaKmsCrtcState *crtc_state = meta_kms_crtc_get_current_state (crtc);
   struct drm_color_lut drm_color_lut[gamma->size];
   int i;
   uint32_t color_lut_blob_id;
@@ -618,6 +726,22 @@ process_crtc_gamma (MetaKmsImplDevice  *impl_device,
                                       error);
   if (!color_lut_blob_id)
     return FALSE;
+
+  if (crtc_state->gamma_mode_type == META_KMS_CRTC_GAMMA_MODE_LOGARITHMIC)
+    {
+      meta_topic (META_DEBUG_KMS,
+                  "[atomic] Setting CRTC (%u, %s) gamma mode: %s",
+                  meta_kms_crtc_get_id (crtc),
+                  meta_kms_impl_device_get_path (impl_device),
+                  "logarithmic gamma");
+
+      if (!add_crtc_property (impl_device,
+                              crtc, req,
+                              META_KMS_CRTC_PROP_GAMMA_MODE,
+                              crtc_state->gamma_mode_value,
+                              error))
+        return FALSE;
+    }
 
   meta_topic (META_DEBUG_KMS,
               "[atomic] Setting CRTC (%u, %s) gamma, size: %d",
@@ -965,6 +1089,26 @@ meta_kms_impl_device_atomic_process_update (MetaKmsImplDevice *impl_device,
                         meta_kms_update_get_plane_assignments (update),
                         NULL,
                         process_plane_assignment,
+                        &error))
+    goto err;
+
+  if (!process_entries (impl_device,
+                        update,
+                        req,
+                        blob_ids,
+                        meta_kms_update_get_crtc_degammas (update),
+                        NULL,
+                        process_crtc_degamma,
+                        &error))
+    goto err;
+
+  if (!process_entries (impl_device,
+                        update,
+                        req,
+                        blob_ids,
+                        meta_kms_update_get_crtc_ctms (update),
+                        NULL,
+                        process_crtc_ctm,
                         &error))
     goto err;
 

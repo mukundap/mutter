@@ -63,6 +63,7 @@
 #include "backends/meta-monitor-manager-dummy.h"
 #include "backends/meta-settings-private.h"
 #include "backends/meta-stage-private.h"
+#include "backends/meta-color-manager.h"
 #include "backends/x11/meta-backend-x11.h"
 #include "clutter/clutter-mutter.h"
 #include "clutter/clutter-seat-private.h"
@@ -156,6 +157,11 @@ struct _MetaBackendPrivate
   MetaRemoteDesktop *remote_desktop;
 #endif
 
+#ifdef HAVE_WAYLAND
+  MetaWaylandCompositor *wayland_compositor;
+#endif
+  MetaColorManager *color_manager;
+
 #ifdef HAVE_PROFILER
   MetaProfiler *profiler;
 #endif
@@ -221,6 +227,7 @@ meta_backend_dispose (GObject *object)
   g_clear_object (&priv->current_device);
   g_clear_object (&priv->monitor_manager);
   g_clear_object (&priv->orientation_manager);
+  g_clear_object (&priv->color_manager);
 #ifdef HAVE_REMOTE_DESKTOP
   g_clear_object (&priv->remote_desktop);
   g_clear_object (&priv->screen_cast);
@@ -1182,6 +1189,7 @@ meta_backend_initable_init (GInitable     *initable,
   priv->cursor_tracker =
     META_BACKEND_GET_CLASS (backend)->create_cursor_tracker (backend);
 
+  priv->color_manager = meta_color_manager_new (backend);
   priv->dnd = g_object_new (META_TYPE_DND, NULL);
 
   priv->cancellable = g_cancellable_new ();
@@ -1711,4 +1719,12 @@ meta_backend_update_from_event (MetaBackend  *backend,
 {
   update_last_device_from_event (backend, event);
   update_pointer_visibility_from_event (backend, event);
+}
+
+MetaColorManager *
+meta_backend_get_color_manager (MetaBackend *backend)
+{
+  MetaBackendPrivate *priv = meta_backend_get_instance_private (backend);
+
+  return priv->color_manager;
 }

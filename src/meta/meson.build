@@ -39,6 +39,7 @@ mutter_public_headers = [
   'meta-window-group.h',
   'meta-window-shape.h',
   'meta-workspace-manager.h',
+  'meta-color-space.h',
   'prefs.h',
   'theme.h',
   'types.h',

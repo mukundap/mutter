@@ -24,6 +24,8 @@
 
 #include "backends/meta-crtc.h"
 
+#define EDID_CTA_COLORIMETRY_BLOCK_TAG        0x5
+
 enum
 {
   PROP_0,
@@ -194,6 +196,24 @@ meta_output_get_backlight (MetaOutput *output)
   return priv->backlight;
 }
 
+uint16_t
+meta_output_get_supported_colorspaces(MetaOutput *output)
+{
+  MetaOutputPrivate *priv = meta_output_get_instance_private (output);
+  MetaOutputInfo *output_info = priv->info;
+
+  return output_info->supported_colorspaces;
+}
+
+gboolean
+meta_output_get_display_supports_colorspace(MetaOutput *output)
+{
+  MetaOutputPrivate *priv = meta_output_get_instance_private (output);
+  MetaOutputInfo *output_info = priv->info;
+
+  return output_info->display_supports_colorspace;
+}
+
 void
 meta_output_add_possible_clone (MetaOutput *output,
                                 MetaOutput *possible_clone)
@@ -285,6 +305,29 @@ meta_output_crtc_to_logical_transform (MetaOutput           *output,
                                            inverted_panel_orientation_transform);
 }
 
+uint16_t
+meta_output_get_display_colorspace (GBytes *edid)
+{
+  uint8_t data_len = 0;
+  size_t len;
+  const uint8_t *color_data_block;
+  uint16_t clrspaces = 0;
+
+  color_data_block = decode_extended_data_block (g_bytes_get_data (edid, &len),
+                                               &data_len,
+                                               EDID_CTA_COLORIMETRY_BLOCK_TAG);
+  if (!color_data_block) {
+    g_debug("No EDID extended data block is present. \n");
+    return 0;
+  }
+  if (data_len != 0) {
+    /* color_data_block[1] bit 7 is DCI-P3 support info as per CTA-861-G */
+    clrspaces = ((color_data_block[1] & 0x80) << 8) | (color_data_block[0]);
+  }
+
+  return clrspaces;
+}
+
 void
 meta_output_info_parse_edid (MetaOutputInfo *output_info,
                              GBytes         *edid)
@@ -296,6 +339,7 @@ meta_output_info_parse_edid (MetaOutputInfo *output_info,
     goto out;
 
   parsed_edid = decode_edid (g_bytes_get_data (edid, &len));
+  output_info->supported_colorspaces = meta_output_get_display_colorspace(edid);
 
   if (parsed_edid)
     {

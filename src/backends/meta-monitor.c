@@ -359,6 +359,17 @@ meta_monitor_is_underscanning (MetaMonitor *monitor)
 }
 
 gboolean
+meta_monitor_supports_colorspace (MetaMonitor *monitor)
+{
+  const MetaOutputInfo *output_info =
+    meta_monitor_get_main_output_info (monitor);
+
+  meta_verbose("%s -> %s() ==> output_info->display_supports_colorspace = %d \n",__FILE__,__func__,output_info->display_supports_colorspace);
+
+  return output_info->display_supports_colorspace;
+}
+
+gboolean
 meta_monitor_is_laptop_panel (MetaMonitor *monitor)
 {
   const MetaOutputInfo *output_info =

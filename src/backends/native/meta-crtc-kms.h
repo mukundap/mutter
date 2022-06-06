@@ -52,6 +52,10 @@ MetaKmsPlaneAssignment * meta_crtc_kms_assign_primary_plane (MetaCrtcKms   *crtc
                                                              MetaDrmBuffer *buffer,
                                                              MetaKmsUpdate *kms_update);
 
+void meta_crtc_kms_assign_overlay_plane (MetaCrtcKms   *crtc_kms,
+                                         MetaDrmBuffer *buffer,
+                                         MetaKmsUpdate *kms_update);
+
 void meta_crtc_kms_set_mode (MetaCrtcKms   *crtc_kms,
                              MetaKmsUpdate *kms_update);
 
@@ -69,6 +73,17 @@ meta_crtc_kms_copy_drm_format_list (MetaCrtcKms *crtc_kms);
 gboolean
 meta_crtc_kms_supports_format (MetaCrtcKms *crtc_kms,
                                uint32_t     drm_format);
+
+void meta_crtc_kms_set_degamma (MetaCrtcKms   *crtc_kms,
+                                MetaKmsDevice *kms_device);
+
+void meta_crtc_kms_set_ctm (MetaCrtcKms   *crtc_kms,
+                            MetaKmsDevice *kms_device,
+                            uint32_t src_cs,
+                            uint16_t dst_cs);
+
+void meta_crtc_kms_set_gamma (MetaCrtcKms   *crtc_kms,
+                              MetaKmsDevice *kms_device);
 
 void meta_crtc_kms_invalidate_gamma (MetaCrtcKms *crtc_kms);
 

@@ -82,6 +82,9 @@ typedef struct _MetaKmsConnectorUpdate
     gboolean has_update;
     gboolean is_enabled;
   } privacy_screen;
+
+  uint16_t target_colorspace;
+  gboolean colorspace_changed;
 } MetaKmsConnectorUpdate;
 
 typedef struct _MetaKmsPageFlipListener
@@ -156,6 +159,12 @@ void meta_kms_update_drop_defunct_page_flip_listeners (MetaKmsUpdate *update);
 
 META_EXPORT_TEST
 GList * meta_kms_update_get_connector_updates (MetaKmsUpdate *update);
+
+META_EXPORT_TEST
+GList * meta_kms_update_get_crtc_degammas (MetaKmsUpdate *update);
+
+META_EXPORT_TEST
+GList * meta_kms_update_get_crtc_ctms (MetaKmsUpdate *update);
 
 META_EXPORT_TEST
 GList * meta_kms_update_get_crtc_gammas (MetaKmsUpdate *update);

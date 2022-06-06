@@ -1,0 +1,358 @@
+#include <glib-object.h>
+#include "backends/native/meta-kms-color-utility.h"
+#include "backends/native/meta-kms.h"
+
+//Reference: https://nick-shaw.github.io/cinematiccolor/common-rgb-color-spaces.html
+double m1 = 0.1593017578125;
+double m2 = 78.84375;
+double c1 = 0.8359375;
+double c2 = 18.8515625;
+double c3 = 18.6875;
+
+#define DD_MIN(a, b) ((a) < (b) ? (a) : (b))
+#define DD_MAX(a, b) ((a) < (b) ? (b) : (a))
+#define MAX_24BIT_NUM ((1<<24) -1)
+
+void create_unity_log_lut(segment_data_t *info, MetaKmsCrtcGamma *gamma)
+{
+  uint32_t temp, index = 0;
+  double scaling_factor;
+  uint32_t max_hw_value = (1 << 16) - 1;
+  unsigned int max_segment_value = 1 << 24;
+
+  gamma->green[index] = gamma->blue[index] = gamma->red[index] = 0;
+  for (int segment=0; segment < info->segment_count; segment++)
+  {
+    uint32_t entry_count = info->segment_data[segment].count;
+    uint32_t start = (1 << (segment - 1));
+    uint32_t end = (1 << segment);
+    for (uint32_t entry = 1; entry <= entry_count; entry++)
+    {
+      index++;
+      scaling_factor = (double)max_hw_value / (double)max_segment_value;
+      temp = start + entry * ((end - start) * 1.0 / entry_count);
+
+      gamma->red[index] = (double)temp * (double)scaling_factor;
+      gamma->red[index] = DD_MIN(gamma->red[index], max_hw_value);
+      gamma->green[index] = gamma->blue[index] = gamma->red[index];
+    }
+  }
+  meta_topic(META_DEBUG_KMS, "Linear LUTs:\n");
+  for (int i=0; i<513; i++)
+  {
+    meta_topic(META_DEBUG_KMS, "gamma->red[%d] = %d, ", i, gamma->red[i]);
+  }
+}
+
+double MatrixDeterminant3x3(double matrix[3][3])
+{
+        double result;
+        result = matrix[0][0] * (matrix[1][1] * matrix[2][2] - matrix[1][2] * matrix[2][1]);
+        result -= matrix[0][1] * (matrix[1][0] * matrix[2][2] - matrix[1][2] * matrix[2][0]);
+        result += matrix[0][2] * (matrix[1][0] * matrix[2][1] - matrix[1][1] * matrix[2][0]);
+
+        return result;
+}
+
+int MatrixInverse3x3(double matrix[3][3], double result[3][3])
+{
+        int retVal = -1;
+        double tmp[3][3];
+        double determinant = MatrixDeterminant3x3(matrix);
+        if(determinant)
+        {
+        tmp[0][0] = (matrix[1][1] * matrix[2][2] - matrix[1][2] * matrix[2][1]) / determinant;
+        tmp[0][1] = (matrix[0][2] * matrix[2][1] - matrix[2][2] * matrix[0][1]) / determinant;
+        tmp[0][2] = (matrix[0][1] * matrix[1][2] - matrix[0][2] * matrix[1][1]) / determinant;
+        tmp[1][0] = (matrix[1][2] * matrix[2][0] - matrix[1][0] * matrix[2][2]) / determinant;
+        tmp[1][1] = (matrix[0][0] * matrix[2][2] - matrix[0][2] * matrix[2][0]) / determinant;
+        tmp[1][2] = (matrix[0][2] * matrix[1][0] - matrix[0][0] * matrix[1][2]) / determinant;
+        tmp[2][0] = (matrix[1][0] * matrix[2][1] - matrix[1][1] * matrix[2][0]) / determinant;
+        tmp[2][1] = (matrix[0][1] * matrix[2][0] - matrix[0][0] * matrix[2][1]) / determinant;
+        tmp[2][2] = (matrix[0][0] * matrix[1][1] - matrix[0][1] * matrix[1][0]) / determinant;
+
+        result[0][0] = tmp[0][0]; result[0][1] = tmp[0][1]; result[0][2] = tmp[0][2];
+        result[1][0] = tmp[1][0]; result[1][1] = tmp[1][1]; result[1][2] = tmp[1][2];
+        result[2][0] = tmp[2][0]; result[2][1] = tmp[2][1]; result[2][2] = tmp[2][2];
+
+        retVal = 0;
+        }
+        return retVal;
+}
+
+void MatrixMult3x3With3x1(double matrix1[3][3], double matrix2[3], double result[3])
+{
+        double tmp[3];
+        tmp[0] = matrix1[0][0] * matrix2[0] + matrix1[0][1] * matrix2[1] + matrix1[0][2] * matrix2[2];
+        tmp[1] = matrix1[1][0] * matrix2[0] + matrix1[1][1] * matrix2[1] + matrix1[1][2] * matrix2[2];
+        tmp[2] = matrix1[2][0] * matrix2[0] + matrix1[2][1] * matrix2[1] + matrix1[2][2] * matrix2[2];
+
+        result[0]=tmp[0];
+        result[1]=tmp[1];
+        result[2]=tmp[2];
+
+}
+
+void MatrixMult3x3(double matrix1[3][3], double matrix2[3][3], double result[3][3])
+{
+        double tmp[3][3];
+        for(uint8_t y=0; y<3; y++)
+        {
+                for(uint8_t x=0; x<3; x++)
+                {
+                        tmp[y][x]= matrix1[y][0] * matrix2[0][x] + matrix1[y][1] * matrix2[1][x] + matrix1[y][2] * matrix2[2][x];
+                }
+
+        }
+        for(uint8_t y=0; y<3;y++)
+        {
+                for(uint8_t x=0; x<3; x++)
+                {
+                        result[y][x] = tmp[y][x];
+                }
+        }
+}
+
+void CreateRGB2XYZMatrix(ColorSpace *pCspace, double rgb2xyz[3][3])
+{
+/*
+   http://www.brucelindbloom.com/index.html?Eqn_RGB_XYZ_Matrix.html
+*/
+        double XYZsum[3];
+        double z[4];
+        double XYZw[3];
+        Chromaticity* pChroma = &pCspace->white;
+        for(uint8_t i=0; i< 4; i++)
+        {
+                z[i]=1- pChroma[i].x - pChroma[i].y;
+        }
+        XYZw[0] = pCspace->white.x / pCspace->white.y;
+        XYZw[1]=1;
+        XYZw[2]=z[0] / pCspace->white.y;
+
+        double xyzrgb[3][3] =
+        {
+                { pCspace->red.x, pCspace->green.x, pCspace->blue.x },
+                { pCspace->red.y, pCspace->green.y, pCspace->blue.y },
+                { z[1], z[2], z[3] }
+        };
+        double mat1[3][3];
+        MatrixInverse3x3(xyzrgb, mat1);
+        MatrixMult3x3With3x1(mat1, XYZw, XYZsum);
+        double mat2[3][3] = { { XYZsum[0], 0, 0 }, { 0, XYZsum[1], 0 }, { 0, 0, XYZsum[2] } };
+        MatrixMult3x3(xyzrgb, mat2, rgb2xyz);
+}
+
+void CreateGamutScalingMatrix(ColorSpace* pSrc, ColorSpace* pDst, double result[3][3])
+{
+        double mat1[3][3], mat2[3][3], tmp[3][3];
+        CreateRGB2XYZMatrix(pSrc, mat1);
+        CreateRGB2XYZMatrix(pDst, mat2);
+
+        MatrixInverse3x3(mat2, tmp);
+        MatrixMult3x3(tmp, mat1, result);
+}
+
+void GetCTMForSrcToDestColorSpace(ColorSpace srcColorSpace, ColorSpace destColorSpace, MetaKmsCrtcCtm *ctm)
+{
+/*
+ https://en.wikipedia.org/wiki/Rec._2020#System_colorimetry
+ https://en.wikipedia.org/wiki/Rec._709#Primary_chromaticities
+*/
+  double result[3][3];
+  CreateGamutScalingMatrix(&srcColorSpace, &destColorSpace, result);
+  for(uint8_t y=0, z=0; y<3;y++)
+  {
+    for(uint8_t x=0; x<3; x++)
+    {
+      if (result[y][x] < 0) {
+        ctm->matrix[z] = (int64_t) (-result[y][x] *
+                                ((int64_t) 1L << 32));
+        ctm->matrix[z] |= 1ULL << 63;
+      } else
+        ctm->matrix[z] =  (int64_t) (result[y][x] *
+                                ((int64_t) 1L << 32));
+      z++;
+    }
+  }
+}
+#if 0
+void GetCTMForBT709ToBT2020(double result[3][3])
+{
+/*
+ https://en.wikipedia.org/wiki/Rec._2020#System_colorimetry
+ https://en.wikipedia.org/wiki/Rec._709#Primary_chromaticities
+*/
+        ColorSpace bt2020, bt709;
+
+        bt2020.white.x = 0.3127;
+        bt2020.white.y = 0.3290;
+        bt2020.white.luminance = 100.0;
+        bt2020.red.x = 0.708;
+        bt2020.red.y = 0.292;
+        bt2020.green.x = 0.170;
+        bt2020.green.y = 0.797;
+        bt2020.blue.x = 0.131;
+        bt2020.blue.y = 0.046;
+
+        bt709.white.x = 0.3127;
+        bt709.white.y = 0.3290;
+        bt709.white.luminance = 100.0;
+        bt709.red.x = 0.64;
+        bt709.red.y = 0.33;
+        bt709.green.x = 0.30;
+        bt709.green.y = 0.60;
+        bt709.blue.x = 0.15;
+        bt709.blue.y = 0.06;
+        CreateGamutScalingMatrix(&bt709, &bt2020, result);
+}
+
+void GetCTMForBT2020ToBT709(double result[3][3])
+{
+/*
+ https://en.wikipedia.org/wiki/Rec._2020#System_colorimetry
+ https://en.wikipedia.org/wiki/Rec._709#Primary_chromaticities
+*/
+        ColorSpace bt2020, bt709;
+
+        bt2020.white.x = 0.3127;
+        bt2020.white.y = 0.3290;
+        bt2020.white.luminance = 100.0;
+        bt2020.red.x = 0.708;
+        bt2020.red.y = 0.292;
+        bt2020.green.x = 0.170;
+        bt2020.green.y = 0.797;
+        bt2020.blue.x = 0.131;
+        bt2020.blue.y = 0.046;
+
+        bt709.white.x = 0.3127;
+        bt709.white.y = 0.3290;
+        bt709.white.luminance = 100.0;
+        bt709.red.x = 0.64;
+        bt709.red.y = 0.33;
+        bt709.green.x = 0.30;
+        bt709.green.y = 0.60;
+        bt709.blue.x = 0.15;
+        bt709.blue.y = 0.06;
+        CreateGamutScalingMatrix(&bt2020, &bt709, result);
+}
+#endif
+
+double OETF_2084(double input, double srcMaxLuminance)
+{
+        double cf=1.0f;
+        double output=0.0f;
+        if(input != 0.0f)
+        {
+                cf = srcMaxLuminance / 10000.0;
+                input *= cf;
+                output = pow(((c1 + (c2 * pow(input, m1))) / (1 + (c3 * pow(input, m1)))), m2);
+        }
+        return output;
+}
+
+/*
+Reference: https://nick-shaw.github.io/cinematiccolor/common-rgb-color-spaces.html
+
+The ST 2084 EOTF is an absolute encoding, defined by the following equation:
+	L=10000×{max(V^1∕m2−c1,0)/(c2−c3×V^1∕m2)}^1∕m1
+where constants are:
+	m1 = 2610∕16384
+	m2 = 2523∕4096×128
+	c1 = 3424∕4096
+	c2 = 2413∕4096×32
+	c3 = 2392∕4096×32
+*/
+double EOTF_2084(double input)
+{
+        double output = 0.0f;
+        if(input != 0.0f)
+        {
+                output = pow(((fmax((pow(input, (1.0/m2)) - c1), 0)) / (c2 - (c3* pow(input, (1.0 / m2))))), (1.0/m1));
+        }
+        return output;
+}
+
+void GenerateOETF2084LUT(OneDLUT *lut)
+{
+        for (int i=0; i<lut->nSamples; i++)
+        {
+                lut->pLutData[i]= (double) i / (double)(lut->nSamples - 1);
+                lut->pLutData[i]= OETF_2084(lut->pLutData[i], 10000.0);
+        }
+}
+
+void GenerateEOTF2084LUT(OneDLUT *lut)
+{
+        for (int i=0; i<lut->nSamples; i++)
+        {
+                lut->pLutData[i]= (double) i / (double)(lut->nSamples -1);
+                lut->pLutData[i]= EOTF_2084(lut->pLutData[i]);
+        }
+}
+
+void PopulateStandardLut(char *StandardLutKey, OneDLUT *lut)
+{
+        if(!strcmp(StandardLutKey, "eotf2084"))
+                GenerateEOTF2084LUT(lut);
+        else if(!strcmp(StandardLutKey, "oetf2084"))
+                GenerateOETF2084LUT(lut);
+        else
+                printf("This custom CURVE is not supported for LUT values");
+
+}
+
+double GetSRGBDecodingValue(double input)
+{
+/*
+ https://en.wikipedia.org/wiki/SRGB#The_forward_transformation_.28CIE_xyY_or_CIE_XYZ_to_sRGB.29
+*/
+	double output = 0.0f;
+	if (input <= 0.004045f)
+	       output =  input / 12.92f;
+	else
+		output = pow(((input + 0.055)/1.055), 2.4);
+	return output;
+}
+
+void GenerateSrgbDegammaLut(MetaKmsCrtcDegamma *degamma)
+{
+  uint32_t max_val = (1 << 16) - 1;
+  for (int i=0; i<degamma->size; i++)
+  {
+    double normalized_input = (double)i / (double)(degamma->size - 1);
+    degamma->red[i] = (double)max_val * GetSRGBDecodingValue(normalized_input)
+                                + 0.5;
+
+    if (degamma->red[i] > max_val)
+      degamma->red[i] = max_val;
+    degamma->green[i] = degamma->blue[i] = degamma->red[i];
+  }
+}
+
+
+double GetSRGBEncodingValue(double input)
+{
+       double output = 0.0f;
+       if(input <= 0.0031308f)
+               output = input * 12.92;
+       else
+               output = (1.055 * pow(input,1.0/2.4)) - 0.055;
+       return output;
+}
+
+void GenerateSrgbGammaLut(MetaKmsCrtcGamma *gamma)
+{
+  uint32_t max_val = (1 << 16) - 1;
+  for (int i=0; i<gamma->size; i++)
+  {
+    double normalized_input = (double)i / (double)(gamma->size - 1);
+    gamma->red[i] = (double)max_val * GetSRGBEncodingValue(normalized_input)
+                      + 0.5;
+
+    if (gamma->red[i] > max_val)
+      gamma->red[i] = max_val;
+    gamma->green[i] = gamma->blue[i] = gamma->red[i];
+  }
+}
+

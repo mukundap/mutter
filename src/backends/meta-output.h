@@ -72,6 +72,20 @@ typedef enum
   META_PRIVACY_SCREEN_LOCKED = 1 << 2,
 } MetaPrivacyScreenState;
 
+typedef enum
+{
+  META_COLORSPACE_TYPE_Default = 0,
+  META_COLORSPACE_TYPE_xvYCC601 = 1 << 0,
+  META_COLORSPACE_TYPE_xvYCC709 = 1 << 1,
+  META_COLORSPACE_TYPE_sYCC601 = 1 << 2,
+  META_COLORSPACE_TYPE_opYCC601 = 1 << 3,
+  META_COLORSPACE_TYPE_opRGB = 1 << 4,
+  META_COLORSPACE_TYPE_BT2020cYCC = 1 << 5,
+  META_COLORSPACE_TYPE_BT2020YCC = 1 << 6,
+  META_COLORSPACE_TYPE_BT2020RGB = 1 << 7,
+  META_COLORSPACE_TYPE_DCIP3 = 1 << 15,
+} MetaColorSpaceType;
+
 typedef struct _MetaOutputInfo
 {
   grefcount ref_count;
@@ -102,6 +116,12 @@ typedef struct _MetaOutputInfo
 
   gboolean supports_underscanning;
   gboolean supports_color_transform;
+
+  /* Display's supported color spaces */
+  gboolean display_supports_colorspace;
+  uint16_t supported_colorspaces;
+  uint16_t target_colorspace;
+  uint16_t previous_colorspace;
 
   /*
    * Get a new preferred mode on hotplug events, to handle dynamic guest
@@ -188,6 +208,9 @@ MetaPrivacyScreenState meta_output_get_privacy_screen_state (MetaOutput *output)
 gboolean meta_output_set_privacy_screen_enabled (MetaOutput  *output,
                                                  gboolean     enabled,
                                                  GError     **error);
+uint16_t meta_output_get_supported_colorspaces(MetaOutput *output);
+
+gboolean meta_output_get_display_supports_colorspace(MetaOutput *output);
 
 void meta_output_add_possible_clone (MetaOutput *output,
                                      MetaOutput *possible_clone);
@@ -216,5 +239,6 @@ void meta_output_update_modes (MetaOutput    *output,
                                MetaCrtcMode  *preferred_mode,
                                MetaCrtcMode **modes,
                                int            n_modes);
+uint16_t meta_output_get_display_colorspace(GBytes *edid);
 
 #endif /* META_OUTPUT_H */

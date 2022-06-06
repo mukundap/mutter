@@ -32,6 +32,7 @@
 #include <drm_fourcc.h>
 
 #include "backends/meta-egl-ext.h"
+#include "backends/meta-color-manager.h"
 #include "backends/native/meta-cogl-utils.h"
 #include "backends/native/meta-crtc-kms.h"
 #include "backends/native/meta-device-pool.h"
@@ -437,8 +438,8 @@ meta_onscreen_native_flip_crtc (CoglOnscreen                *onscreen,
   MetaKms *kms;
   MetaKmsUpdate *kms_update;
   MetaOnscreenNativeSecondaryGpuState *secondary_gpu_state = NULL;
-  MetaDrmBuffer *buffer;
   MetaKmsPlaneAssignment *plane_assignment;
+  MetaDrmBuffer *buffer = NULL;
 
   COGL_TRACE_BEGIN_SCOPED (MetaOnscreenNativeFlipCrtcs,
                            "Onscreen (flip CRTCs)");
@@ -465,15 +466,22 @@ meta_onscreen_native_flip_crtc (CoglOnscreen                *onscreen,
           buffer = secondary_gpu_state->gbm.next_fb;
         }
 
-      plane_assignment = meta_crtc_kms_assign_primary_plane (crtc_kms,
-                                                             buffer,
-                                                             kms_update);
+#if 0 // For debug purpose
+      int plane_count = meta_drm_buffer_get_plane_count(buffer);
+      for(int i = 0; i < plane_count; i++) {
+        int offset = meta_drm_buffer_get_offset(buffer, i);
+        g_print("offset = %d\n",offset);
+      }
 
-      if (rectangles != NULL && n_rectangles != 0)
-        {
-          meta_kms_plane_assignment_set_fb_damage (plane_assignment,
-                                                   rectangles, n_rectangles);
-        }
+      int fb_id = meta_drm_buffer_get_fb_id(buffer);
+      g_print("processing the framebuffer : fb_id = %d \n", fb_id);
+#endif
+
+      if(flags == META_KMS_PAGE_FLIP_LISTENER_FLAG_NONE)
+        meta_crtc_kms_assign_primary_plane (crtc_kms, buffer, kms_update);
+      else
+        meta_crtc_kms_assign_overlay_plane (crtc_kms, buffer, kms_update);
+
       break;
     case META_RENDERER_NATIVE_MODE_SURFACELESS:
       g_assert_not_reached ();
@@ -533,6 +541,78 @@ meta_onscreen_native_set_crtc_mode (CoglOnscreen              *onscreen,
   meta_crtc_kms_set_mode (crtc_kms, kms_update);
   meta_output_kms_set_underscan (META_OUTPUT_KMS (onscreen_native->output),
                                  kms_update);
+}
+
+static void
+meta_onscreen_native_set_crtc_degamma (CoglOnscreen *onscreen)
+{
+  MetaOnscreenNative *onscreen_native = META_ONSCREEN_NATIVE (onscreen);
+  MetaCrtcKms *crtc_kms = META_CRTC_KMS (onscreen_native->crtc);
+  MetaKmsCrtc *kms_crtc = meta_crtc_kms_get_kms_crtc (crtc_kms);
+  MetaKmsDevice *kms_device = meta_kms_crtc_get_device (kms_crtc);
+
+  COGL_TRACE_BEGIN_SCOPED (MetaOnscreenNativeSetCrtcModes,
+                           "Onscreen (set CRTC degamma)");
+
+  meta_crtc_kms_set_degamma (crtc_kms, kms_device);
+}
+
+static void
+meta_onscreen_native_set_crtc_ctm (CoglOnscreen *onscreen,
+                                   uint32_t src_cs,
+                                   uint16_t dst_cs)
+{
+  MetaOnscreenNative *onscreen_native = META_ONSCREEN_NATIVE (onscreen);
+  MetaCrtcKms *crtc_kms = META_CRTC_KMS (onscreen_native->crtc);
+  MetaKmsCrtc *kms_crtc = meta_crtc_kms_get_kms_crtc (crtc_kms);
+  MetaKmsDevice *kms_device = meta_kms_crtc_get_device (kms_crtc);
+
+  COGL_TRACE_BEGIN_SCOPED (MetaOnscreenNativeSetCrtcModes,
+                           "Onscreen (set CRTC ctm)");
+
+  meta_crtc_kms_set_ctm (crtc_kms, kms_device, src_cs, dst_cs);
+}
+
+static void
+meta_onscreen_native_set_crtc_gamma (CoglOnscreen *onscreen)
+{
+  MetaOnscreenNative *onscreen_native = META_ONSCREEN_NATIVE (onscreen);
+  MetaCrtcKms *crtc_kms = META_CRTC_KMS (onscreen_native->crtc);
+  MetaKmsCrtc *kms_crtc = meta_crtc_kms_get_kms_crtc (crtc_kms);
+  MetaKmsDevice *kms_device = meta_kms_crtc_get_device (kms_crtc);
+
+  COGL_TRACE_BEGIN_SCOPED (MetaOnscreenNativeSetCrtcModes,
+                            "Onscreen (set CRTC gamma)");
+
+  meta_crtc_kms_set_gamma (crtc_kms, kms_device);
+}
+
+static void
+meta_onscreen_native_maybe_needs_csc (CoglOnscreen *onscreen)
+{
+  gboolean needs_csc = FALSE;
+  uint32_t src_cs;
+  uint16_t dst_cs;
+
+  meta_color_manager_get_colorspaces (&src_cs, &dst_cs);
+
+  needs_csc = meta_color_manager_maybe_needs_csc ();
+  if (needs_csc)
+    {
+      // Check for display hw based csc
+      if (!meta_color_manager_get_use_glshaders ())
+        {
+          /* colorspace conversion using Display HW pipeline Degamma|Ctm|Gamma*/
+          /* Degamma for linearization */
+          meta_onscreen_native_set_crtc_degamma (onscreen);
+
+          /* CTM: color transform matrix for color gamut mapping */
+          meta_onscreen_native_set_crtc_ctm (onscreen, src_cs, dst_cs);
+
+          /* Gamma for non-linearization */
+          meta_onscreen_native_set_crtc_gamma (onscreen);
+        }
+    }
 }
 
 static void
@@ -1018,6 +1098,9 @@ ensure_crtc_modes (CoglOnscreen *onscreen)
   if (meta_renderer_native_pop_pending_mode_set (renderer_native,
                                                  onscreen_native->view))
     meta_onscreen_native_set_crtc_mode (onscreen, renderer_gpu_data);
+
+  /* check if colorspace conversion needed, should it be per frame? */
+  meta_onscreen_native_maybe_needs_csc (onscreen);
 }
 
 static void

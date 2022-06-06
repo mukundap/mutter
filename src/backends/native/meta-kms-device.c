@@ -41,6 +41,8 @@
 #include "backends/native/meta-kms-private.h"
 #include "backends/native/meta-kms-update-private.h"
 
+#define DRM_CLIENT_CAP_ADVANCE_GAMMA_MODES     6
+
 struct _MetaKmsDevice
 {
   GObject parent;
@@ -225,6 +227,13 @@ meta_kms_device_get_cursor_plane_for (MetaKmsDevice *device,
   return get_plane_with_type_for (device, crtc, META_KMS_PLANE_TYPE_CURSOR);
 }
 
+MetaKmsPlane *
+meta_kms_device_get_overlay_plane_for (MetaKmsDevice *device,
+                                       MetaKmsCrtc   *crtc)
+{
+  return get_plane_with_type_for (device, crtc, META_KMS_PLANE_TYPE_OVERLAY);
+}
+
 GList *
 meta_kms_device_get_fallback_modes (MetaKmsDevice *device)
 {
@@ -369,7 +378,22 @@ meta_create_kms_impl_device (MetaKmsDevice      *device,
                              MetaKmsDeviceFlag   flags,
                              GError            **error)
 {
+
+  uint64_t advance_gamma_modes;
   meta_assert_in_kms_impl (meta_kms_impl_get_kms (impl));
+
+
+  if (drmGetCap (fd, DRM_CLIENT_CAP_ADVANCE_GAMMA_MODES, &advance_gamma_modes) == 0)
+    {
+      if (advance_gamma_modes)
+        {
+          if (drmSetClientCap (fd, DRM_CLIENT_CAP_ADVANCE_GAMMA_MODES, 1) != 0)
+            {
+              g_message ("Failed to activate advance gamma modes, "
+			 "use legacy gamma mode instead.");
+            }
+        }
+    }
 
   if (flags & META_KMS_DEVICE_FLAG_NO_MODE_SETTING)
     {

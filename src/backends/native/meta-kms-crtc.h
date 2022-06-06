@@ -28,6 +28,18 @@
 #include "core/util-private.h"
 #include "meta/boxes.h"
 
+typedef enum _MetaKmsCrtcGammaMode
+{
+  META_KMS_CRTC_GAMMA_MODE_NONE = 0,
+  META_KMS_CRTC_GAMMA_MODE_LOGARITHMIC,
+} MetaKmsCrtcGammaMode;
+
+typedef struct {
+  uint32_t segment_count;
+  struct drm_color_lut_range *segment_data;
+  uint32_t entries_count;
+} segment_data_t;
+
 typedef struct _MetaKmsCrtcState
 {
   gboolean is_active;
@@ -35,6 +47,22 @@ typedef struct _MetaKmsCrtcState
   MetaRectangle rect;
   gboolean is_drm_mode_valid;
   drmModeModeInfo drm_mode;
+  MetaKmsCrtcGammaMode gamma_mode_type;
+  int gamma_mode_value;
+  segment_data_t *segment_info;
+
+  struct {
+    uint16_t *red;
+    uint16_t *green;
+    uint16_t *blue;
+
+    int size;
+  } degamma;
+
+  struct {
+    int size;
+    uint64_t *matrix[9];
+  } ctm;
 
   struct {
     uint16_t *red;
@@ -44,6 +72,22 @@ typedef struct _MetaKmsCrtcState
     int size;
   } gamma;
 } MetaKmsCrtcState;
+
+typedef struct _MetaKmsCrtcDegamma
+{
+  MetaKmsCrtc *crtc;
+  int size;
+  uint16_t *red;
+  uint16_t *green;
+  uint16_t *blue;
+} MetaKmsCrtcDegamma;
+
+typedef struct _MetaKmsCrtcCtm
+{
+  MetaKmsCrtc *crtc;
+  int size;
+  uint64_t *matrix;;
+} MetaKmsCrtcCtm;
 
 typedef struct _MetaKmsCrtcGamma
 {
@@ -73,6 +117,28 @@ int meta_kms_crtc_get_idx (MetaKmsCrtc *crtc);
 
 META_EXPORT_TEST
 gboolean meta_kms_crtc_is_active (MetaKmsCrtc *crtc);
+
+MetaKmsCrtcDegamma * meta_kms_crtc_get_degamma (MetaKmsCrtc *crtc);
+
+void meta_kms_crtc_degamma_free (MetaKmsCrtcDegamma *degamma);
+
+MetaKmsCrtcDegamma * meta_kms_crtc_degamma_new (MetaKmsCrtc    *crtc,
+                                                int             size,
+                                                const uint16_t *red,
+                                                const uint16_t *green,
+                                                const uint16_t *blue);
+
+MetaKmsCrtcCtm * meta_kms_crtc_get_ctm (MetaKmsCrtc *crtc,
+                                        uint32_t src_cs,
+                                        uint16_t dst_cs);
+
+void meta_kms_crtc_ctm_free (MetaKmsCrtcCtm *ctm);
+
+MetaKmsCrtcCtm * meta_kms_crtc_ctm_new (MetaKmsCrtc    *crtc,
+                                        int             size,
+                                        const uint64_t *matrix);
+
+MetaKmsCrtcGamma * meta_kms_crtc_get_gamma (MetaKmsCrtc *crtc);
 
 void meta_kms_crtc_gamma_free (MetaKmsCrtcGamma *gamma);
 

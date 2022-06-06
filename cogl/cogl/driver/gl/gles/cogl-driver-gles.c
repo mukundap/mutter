@@ -253,6 +253,8 @@ _cogl_driver_pixel_format_to_gl (CoglContext     *context,
 
     case COGL_PIXEL_FORMAT_ANY:
     case COGL_PIXEL_FORMAT_YUV:
+    case COGL_PIXEL_FORMAT_P010:
+    case COGL_PIXEL_FORMAT_NV12:
       g_assert_not_reached ();
       break;
     }

@@ -45,6 +45,7 @@ struct _MetaCrtcKms
   MetaKmsCrtc *kms_crtc;
 
   MetaKmsPlane *primary_plane;
+  MetaKmsPlane *overlay_plane;
 
   gpointer cursor_renderer_private;
   GDestroyNotify cursor_renderer_private_destroy_notify;
@@ -175,6 +176,57 @@ meta_crtc_kms_assign_primary_plane (MetaCrtcKms   *crtc_kms,
   return plane_assignment;
 }
 
+void
+meta_crtc_kms_assign_overlay_plane (MetaCrtcKms   *crtc_kms,
+                                    MetaDrmBuffer *buffer,
+                                    MetaKmsUpdate *kms_update)
+{
+  MetaCrtc *crtc = META_CRTC (crtc_kms);
+  const MetaCrtcConfig *crtc_config;
+  const MetaCrtcModeInfo *crtc_mode_info;
+  MetaFixed16Rectangle src_rect;
+  MetaRectangle dst_rect;
+  MetaKmsAssignPlaneFlag flags;
+  MetaKmsCrtc *kms_crtc;
+  MetaKmsDevice *kms_device;
+  MetaKmsPlane *overlay_kms_plane;
+  MetaKmsPlaneAssignment *plane_assignment;
+
+  crtc_config = meta_crtc_get_config (crtc);
+  crtc_mode_info = meta_crtc_mode_get_info (crtc_config->mode);
+
+  src_rect = (MetaFixed16Rectangle) {
+    .x = meta_fixed_16_from_int (0),
+    .y = meta_fixed_16_from_int (0),
+    .width = meta_fixed_16_from_int (crtc_mode_info->width),
+    .height = meta_fixed_16_from_int (crtc_mode_info->height),
+  };
+  dst_rect = (MetaRectangle) {
+    .x = 0,
+    .y = 0,
+    .width = crtc_mode_info->width,
+    .height = crtc_mode_info->height,
+  };
+
+  flags = META_KMS_ASSIGN_PLANE_FLAG_ALLOW_FAIL;
+
+  kms_crtc = meta_crtc_kms_get_kms_crtc (crtc_kms);
+  kms_device = meta_kms_crtc_get_device (kms_crtc);
+  overlay_kms_plane = meta_kms_device_get_overlay_plane_for (kms_device,
+                                                             kms_crtc);
+  uint32_t plane_id = meta_kms_plane_get_id(overlay_kms_plane);
+  MetaKmsPlaneType plane_type = meta_kms_plane_get_plane_type(overlay_kms_plane);
+
+  plane_assignment = meta_kms_update_assign_plane (kms_update,
+                                                   kms_crtc,
+                                                   overlay_kms_plane,
+                                                   buffer,
+                                                   src_rect,
+                                                   dst_rect,
+                                                   flags);
+  meta_crtc_kms_apply_transform (crtc_kms, plane_assignment);
+}
+
 static GList *
 generate_crtc_connector_list (MetaGpu  *gpu,
                               MetaCrtc *crtc)
@@ -198,6 +250,73 @@ generate_crtc_connector_list (MetaGpu  *gpu,
     }
 
   return connectors;
+}
+
+void
+meta_crtc_kms_set_degamma (MetaCrtcKms   *crtc_kms,
+                           MetaKmsDevice *kms_device)
+{
+  MetaKms *kms = meta_kms_device_get_kms (kms_device);
+  MetaKmsUpdate *kms_update;
+  MetaKmsCrtcDegamma *degamma;
+
+  degamma = meta_kms_crtc_get_degamma (meta_crtc_kms_get_kms_crtc (crtc_kms));
+
+  if (!degamma)
+    return;
+
+  kms_update = meta_kms_ensure_pending_update (kms, kms_device);
+  meta_kms_update_set_crtc_degamma (kms_update,
+                                    meta_crtc_kms_get_kms_crtc (crtc_kms),
+                                    degamma->size,
+                                    degamma->red,
+                                    degamma->green,
+                                    degamma->blue);
+}
+
+void
+meta_crtc_kms_set_ctm (MetaCrtcKms   *crtc_kms,
+                       MetaKmsDevice *kms_device,
+                       uint32_t src_cs,
+                       uint16_t dst_cs)
+{
+  MetaKms *kms = meta_kms_device_get_kms (kms_device);
+  MetaKmsUpdate *kms_update;
+  MetaKmsCrtcCtm *ctm;
+
+  ctm = meta_kms_crtc_get_ctm (meta_crtc_kms_get_kms_crtc (crtc_kms),
+                               src_cs, dst_cs);
+
+  if (!ctm)
+    return;
+
+  kms_update = meta_kms_ensure_pending_update (kms, kms_device);
+  meta_kms_update_set_crtc_ctm (kms_update,
+                                meta_crtc_kms_get_kms_crtc (crtc_kms),
+                                ctm->size,
+                                ctm->matrix);
+}
+
+void
+meta_crtc_kms_set_gamma (MetaCrtcKms   *crtc_kms,
+                         MetaKmsDevice *kms_device)
+{
+  MetaKms *kms = meta_kms_device_get_kms (kms_device);
+  MetaKmsUpdate *kms_update;
+  MetaKmsCrtcGamma *gamma;
+
+  gamma = meta_kms_crtc_get_gamma (meta_crtc_kms_get_kms_crtc (crtc_kms));
+
+  if (!gamma)
+    return;
+
+  kms_update = meta_kms_ensure_pending_update (kms, kms_device);
+  meta_kms_update_set_crtc_gamma (kms_update,
+                                  meta_crtc_kms_get_kms_crtc (crtc_kms),
+                                  gamma->size,
+                                  gamma->red,
+                                  gamma->green,
+                                  gamma->blue);
 }
 
 void
@@ -347,9 +466,12 @@ meta_crtc_kms_new (MetaGpuKms  *gpu_kms,
   MetaKmsDevice *kms_device;
   MetaCrtcKms *crtc_kms;
   MetaKmsPlane *primary_plane;
+  MetaKmsPlane *overlay_plane;
 
   kms_device = meta_gpu_kms_get_kms_device (gpu_kms);
   primary_plane = meta_kms_device_get_primary_plane_for (kms_device,
+                                                         kms_crtc);
+  overlay_plane = meta_kms_device_get_overlay_plane_for (kms_device,
                                                          kms_crtc);
   crtc_kms = g_object_new (META_TYPE_CRTC_KMS,
                            "id", (uint64_t) meta_kms_crtc_get_id (kms_crtc),
@@ -358,6 +480,7 @@ meta_crtc_kms_new (MetaGpuKms  *gpu_kms,
 
   crtc_kms->kms_crtc = kms_crtc;
   crtc_kms->primary_plane = primary_plane;
+  crtc_kms->overlay_plane = overlay_plane;
 
   if (!kms_crtc_crtc_kms_quark)
     {

@@ -138,6 +138,55 @@ meta_output_kms_set_privacy_screen_enabled (MetaOutput  *output,
   return TRUE;
 }
 
+uint16_t
+drm_clrspace_to_kernel_clrspace(uint16_t drm_colorspace)
+{
+  switch(drm_colorspace)
+    {
+    case DRM_COLORSPACE_REC2020:
+      return DRM_MODE_COLORIMETRY_BT2020_RGB;
+    case DRM_COLORSPACE_DCIP3:
+      return DRM_MODE_COLORIMETRY_DCI_P3_RGB_D65;
+    case DRM_COLORSPACE_REC709:
+    default:
+      return DRM_MODE_COLORIMETRY_DEFAULT;
+    }
+}
+
+void
+meta_output_kms_set_colorspace (MetaOutputKms *output_kms,
+                              MetaKmsUpdate *kms_update,
+                              uint16_t drm_colorspace)
+{
+  MetaOutput *output = META_OUTPUT (output_kms);
+  MetaOutputInfo *output_info = meta_output_get_info (output);
+  meta_verbose("==> %s:%s \n", __FILE__,__func__);
+  uint16_t target_colorspace;
+
+  if (!output_info->display_supports_colorspace)
+    return;
+
+  /*target_colorspace = meta_output_colorspace_to_drm_colorspace(
+                                   output_info->display_supports_colorspace);*/
+
+  //TODO : We need to have a check by compring with the previouly set colorspace.
+
+  target_colorspace = drm_clrspace_to_kernel_clrspace(drm_colorspace);
+
+  // if the previous colorspace and target colorspace are not same, then set the target colorspace
+  // otherewise ignore it.
+  if(output_info->previous_colorspace == target_colorspace)
+    return;
+
+  meta_kms_update_set_colorspace (kms_update,
+                                   output_kms->kms_connector,
+                                   target_colorspace);
+
+  output_info->previous_colorspace = target_colorspace;
+
+  meta_verbose("%s:%s ==>\n", __FILE__,__func__);
+}
+
 uint32_t
 meta_output_kms_get_connector_id (MetaOutputKms *output_kms)
 {
@@ -405,11 +454,22 @@ meta_output_kms_new (MetaGpuKms        *gpu_kms,
   output_info->supports_underscanning =
     meta_kms_connector_is_underscanning_supported (kms_connector);
 
+  output_info->display_supports_colorspace = connector_state->supports_colorspace;
+  g_print("Display Supports Colorspace = %d\n", output_info->display_supports_colorspace);
   meta_output_info_parse_edid (output_info, connector_state->edid_data);
 
   drm_connector_type = meta_kms_connector_get_connector_type (kms_connector);
   output_info->connector_type =
     meta_kms_connector_type_from_drm (drm_connector_type);
+  //TODO : This needs a clarification on the default colorspace if the monitor does not
+  // exhibits non-standard colorspaces.
+  if(!output_info->supported_colorspaces)
+	output_info->target_colorspace = DRM_COLORSPACE_INVALID;
+  else if(output_info->supported_colorspaces & (META_COLORSPACE_TYPE_BT2020YCC
+                                         | META_COLORSPACE_TYPE_BT2020RGB))
+  {
+    output_info->target_colorspace = DRM_COLORSPACE_REC2020;
+  }
 
   output_info->tile_info = connector_state->tile_info;
 

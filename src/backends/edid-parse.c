@@ -31,6 +31,11 @@
 
 #include "backends/edid.h"
 
+#define EDID_BLOCK_LENGTH               128
+#define EDID_CTA_EXT_ID                 0x02
+#define EDID_CTA_TAG_COLORIMETRY        0x7
+#define EDID_EXTENSION_FLAG_ADDR        0x7E
+
 static int
 get_bit (int in, int bit)
 {
@@ -540,3 +545,90 @@ decode_edid (const uchar *edid)
       return NULL;
     }
 }
+
+static const uchar *
+find_cta_extension_block(const uchar *edid)
+{
+  uchar ext_date_byte;
+  int i;
+  const uchar *ext = NULL;
+
+  /* check for an Extension flag */
+  ext_date_byte = edid[EDID_EXTENSION_FLAG_ADDR];
+  if (!ext_date_byte) {
+    g_print("EDID doesn't have any extension block\n");
+    return NULL;
+  }
+
+  for (i = 0; i < ext_date_byte; i++) {
+    ext = edid + EDID_BLOCK_LENGTH * (i + 1);
+
+    if (ext[0] == EDID_CTA_EXT_ID)
+      break;
+  }
+
+  if (i == ext_date_byte)
+    return NULL;
+
+  return ext;
+}
+
+/*
+ * This method is used to decode the CTA extension data if present
+ * in edid. CTA extension data contains different types of datablocks
+ * like video/audio/colorimetry/S-HDR/D-HDR,etc
+ * Sample edid CTA Extension data 02 03 19 71 44 90 04....
+ * 02 -> donotes CTA Ext ID, 03:version, 19:offset. The actual data block
+ * will start from 44 i.e) db[4]
+ *
+ * CTA extension data starts from db[4] to db[offset]
+ *
+ */
+const uchar *
+decode_extended_data_block(const uchar *edid,
+                                    uchar *data_len,
+                                    unsigned int data_block_tag)
+{
+  unsigned int version, offset;
+  uchar extension_tag_type;
+  uchar extended_tag;
+  uchar db_len;
+
+  const uchar *db;
+  const uchar *ext_db_start, *ext_db_end;
+  const uchar *cta_ext_db;
+
+  cta_ext_db = find_cta_extension_block(edid);
+  if (!cta_ext_db) {
+    g_print("No CTA extension block available\n");
+    return NULL;
+  }
+
+  version = cta_ext_db[1];
+  offset = cta_ext_db[2];
+
+  ext_db_start = cta_ext_db + 4;
+  ext_db_end = cta_ext_db + offset - 1;
+
+  for (db = ext_db_start; db < ext_db_end; db += (db_len + 1))
+  {
+    /* First data byte contains db length and tag type */
+    db_len = db[0] & 0x1F;
+    extension_tag_type = (db[0] & 0xe0) >> 5;
+
+    /* Checking for Colorimetry extended tag block */
+    if (extension_tag_type != EDID_CTA_TAG_COLORIMETRY)
+      continue;
+
+    /* Extended block uses one extra byte for extended tag */
+    extended_tag = db[1];
+    if (extended_tag != data_block_tag)
+      continue;
+
+    *data_len = db_len - 1;
+    return db + 2;
+  }
+
+  return NULL;
+}
+
