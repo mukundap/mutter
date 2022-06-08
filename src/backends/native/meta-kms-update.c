@@ -38,6 +38,7 @@ struct _MetaKmsUpdate
   GList *mode_sets;
   GList *plane_assignments;
   GList *connector_updates;
+  GList *crtc_updates;
   GList *crtc_gammas;
 
   MetaKmsCustomPageFlip *custom_page_flip;
@@ -404,6 +405,46 @@ meta_kms_update_set_crtc_gamma (MetaKmsUpdate  *update,
   update->crtc_gammas = g_list_prepend (update->crtc_gammas, gamma);
 }
 
+static MetaKmsCrtcUpdate *
+ensure_crtc_update (MetaKmsUpdate *update,
+                    MetaKmsCrtc   *crtc)
+{
+  GList *l;
+  MetaKmsCrtcUpdate *crtc_update;
+
+  for (l = update->crtc_updates; l; l = l->next)
+    {
+      crtc_update = l->data;
+
+      if (crtc_update->crtc == crtc)
+        return crtc_update;
+    }
+
+  crtc_update = g_new0 (MetaKmsCrtcUpdate, 1);
+  crtc_update->crtc = crtc;
+
+  update->crtc_updates = g_list_prepend (update->crtc_updates,
+                                         crtc_update);
+
+  return crtc_update;
+}
+
+void
+meta_kms_update_set_vrr_mode (MetaKmsUpdate *update,
+                              MetaKmsCrtc   *crtc,
+                              gboolean       is_active)
+{
+  MetaKmsCrtcUpdate *crtc_update;
+
+  g_assert (!meta_kms_update_is_locked (update));
+  g_assert (meta_kms_crtc_get_device (crtc) == update->device);
+  g_assert (!update->power_save);
+
+  crtc_update = ensure_crtc_update (update, crtc);
+  crtc_update->vrr_mode.has_update = TRUE;
+  crtc_update->vrr_mode.is_active = is_active;
+}
+
 void
 meta_kms_update_add_page_flip_listener (MetaKmsUpdate                       *update,
                                         MetaKmsCrtc                         *crtc,
@@ -636,6 +677,12 @@ meta_kms_update_get_connector_updates (MetaKmsUpdate *update)
 }
 
 GList *
+meta_kms_update_get_crtc_updates (MetaKmsUpdate *update)
+{
+  return update->crtc_updates;
+}
+
+GList *
 meta_kms_update_get_crtc_gammas (MetaKmsUpdate *update)
 {
   return update->crtc_gammas;
@@ -708,6 +755,7 @@ meta_kms_update_free (MetaKmsUpdate *update)
   g_list_free_full (update->page_flip_listeners,
                     (GDestroyNotify) meta_kms_page_flip_listener_free);
   g_list_free_full (update->connector_updates, g_free);
+  g_list_free_full (update->crtc_updates, g_free);
   g_list_free_full (update->crtc_gammas, (GDestroyNotify) meta_kms_crtc_gamma_free);
   g_clear_pointer (&update->custom_page_flip, meta_kms_custom_page_flip_free);
 

@@ -262,6 +262,51 @@ add_crtc_property (MetaKmsImplDevice  *impl_device,
 }
 
 static gboolean
+process_crtc_update (MetaKmsImplDevice  *impl_device,
+                     MetaKmsUpdate      *update,
+                     drmModeAtomicReq   *req,
+                     GArray             *blob_ids,
+                     gpointer            update_entry,
+                     gpointer            user_data,
+                     GError            **error)
+{
+  MetaKmsCrtcUpdate *crtc_update = update_entry;
+  MetaKmsCrtc *crtc = crtc_update->crtc;
+
+  if (crtc_update->vrr_mode.has_update &&
+      crtc_update->vrr_mode.is_active)
+    {
+      meta_topic (META_DEBUG_KMS,
+                  "[atomic] Setting VRR mode on CRTC %u (%s)",
+                  meta_kms_crtc_get_id (crtc),
+                  meta_kms_impl_device_get_path (impl_device));
+
+      if (!add_crtc_property (impl_device,
+                              crtc, req,
+                              META_KMS_CRTC_PROP_VRR_ENABLED,
+                              1,
+                              error))
+        return FALSE;
+    }
+  else if (crtc_update->vrr_mode.has_update)
+    {
+      meta_topic (META_DEBUG_KMS,
+                  "[atomic] Unsetting VRR mode on CRTC %u (%s)",
+                  meta_kms_crtc_get_id (crtc),
+                  meta_kms_impl_device_get_path (impl_device));
+
+      if (!add_crtc_property (impl_device,
+                              crtc, req,
+                              META_KMS_CRTC_PROP_VRR_ENABLED,
+                              0,
+                              error))
+        return FALSE;
+    }
+
+  return TRUE;
+}
+
+static gboolean
 process_mode_set (MetaKmsImplDevice  *impl_device,
                   MetaKmsUpdate      *update,
                   drmModeAtomicReq   *req,
@@ -945,6 +990,16 @@ meta_kms_impl_device_atomic_process_update (MetaKmsImplDevice *impl_device,
                         meta_kms_update_get_connector_updates (update),
                         NULL,
                         process_connector_update,
+                        &error))
+    goto err;
+
+  if (!process_entries (impl_device,
+                        update,
+                        req,
+                        blob_ids,
+                        meta_kms_update_get_crtc_updates (update),
+                        NULL,
+                        process_crtc_update,
                         &error))
     goto err;
 

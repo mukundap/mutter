@@ -181,6 +181,73 @@ set_connector_property (MetaKmsImplDevice     *impl_device,
 }
 
 static gboolean
+set_crtc_property (MetaKmsImplDevice  *impl_device,
+                   MetaKmsCrtc        *crtc,
+                   MetaKmsCrtcProp     prop,
+                   uint64_t            value,
+                   GError            **error)
+{
+  uint32_t prop_id;
+  int fd;
+  int ret;
+
+  prop_id = meta_kms_crtc_get_prop_id (crtc, prop);
+  if (!prop_id)
+    {
+      g_set_error (error, G_IO_ERROR, G_IO_ERROR_NOT_SUPPORTED,
+                   "Property (%s) not found on CRTC %u",
+                   meta_kms_crtc_get_prop_name (crtc, prop),
+                   meta_kms_crtc_get_id (crtc));
+      return FALSE;
+    }
+
+  fd = meta_kms_impl_device_get_fd (impl_device);
+
+  ret = drmModeObjectSetProperty (fd,
+                                  meta_kms_crtc_get_id (crtc),
+                                  DRM_MODE_OBJECT_CRTC,
+                                  prop_id,
+                                  value);
+  if (ret != 0)
+    {
+      g_set_error (error, G_IO_ERROR, g_io_error_from_errno (-ret),
+                   "Failed to set CRTC %u property %u: %s",
+                   meta_kms_crtc_get_id (crtc),
+                   prop_id,
+                   g_strerror (-ret));
+      return FALSE;
+    }
+
+  return TRUE;
+}
+
+/*static gboolean
+process_power_save (MetaKmsImplDevice  *impl_device,
+                    GError            **error)
+{
+  GList *l;
+
+  for (l = meta_kms_impl_device_peek_connectors (impl_device); l; l = l->next)
+    {
+      MetaKmsConnector *connector = l->data;
+
+      meta_topic (META_DEBUG_KMS,
+                  "[simple] Setting DPMS of connector %u (%s) to OFF",
+                  meta_kms_connector_get_id (connector),
+                  meta_kms_impl_device_get_path (impl_device));
+
+      if (!set_connector_property (impl_device,
+                                   connector,
+                                   META_KMS_CONNECTOR_PROP_DPMS,
+                                   DRM_MODE_DPMS_OFF,
+                                   error))
+        return FALSE;
+    }
+
+  return TRUE;
+}*/
+
+static gboolean
 process_connector_update (MetaKmsImplDevice  *impl_device,
                           MetaKmsUpdate      *update,
                           gpointer            update_entry,
@@ -247,6 +314,48 @@ process_connector_update (MetaKmsImplDevice  *impl_device,
                                    META_KMS_CONNECTOR_PROP_PRIVACY_SCREEN_SW_STATE,
                                    connector_update->privacy_screen.is_enabled,
                                    error))
+        return FALSE;
+    }
+
+  return TRUE;
+}
+
+static gboolean
+process_crtc_update (MetaKmsImplDevice  *impl_device,
+                     MetaKmsUpdate      *update,
+                     gpointer            update_entry,
+                     GError            **error)
+{
+  MetaKmsCrtcUpdate *crtc_update = update_entry;
+  MetaKmsCrtc *crtc = crtc_update->crtc;
+
+  if (crtc_update->vrr_mode.has_update &&
+      crtc_update->vrr_mode.is_active)
+    {
+      meta_topic (META_DEBUG_KMS,
+                  "[simple] Setting VRR mode on CRTC %u (%s)",
+                  meta_kms_crtc_get_id (crtc),
+                  meta_kms_impl_device_get_path (impl_device));
+
+      if (!set_crtc_property (impl_device,
+                              crtc,
+                              META_KMS_CRTC_PROP_VRR_ENABLED,
+                              1,
+                              error))
+        return FALSE;
+    }
+  else if (crtc_update->vrr_mode.has_update)
+    {
+      meta_topic (META_DEBUG_KMS,
+                  "[simple] Unsetting VRR mode on CRTC %u (%s)",
+                  meta_kms_crtc_get_id (crtc),
+                  meta_kms_impl_device_get_path (impl_device));
+
+      if (!set_crtc_property (impl_device,
+                              crtc,
+                              META_KMS_CRTC_PROP_VRR_ENABLED,
+                              0,
+                              error))
         return FALSE;
     }
 
@@ -1493,6 +1602,13 @@ meta_kms_impl_device_simple_process_update (MetaKmsImplDevice *impl_device,
                         update,
                         meta_kms_update_get_connector_updates (update),
                         process_connector_update,
+                        &error))
+    goto err;
+
+  if (!process_entries (impl_device,
+                        update,
+                        meta_kms_update_get_crtc_updates (update),
+                        process_crtc_update,
                         &error))
     goto err;
 

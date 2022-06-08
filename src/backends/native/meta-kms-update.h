@@ -127,6 +127,10 @@ void meta_kms_plane_assignment_set_fb_damage (MetaKmsPlaneAssignment *plane_assi
                                               const int              *rectangles,
                                               int                     n_rectangles);
 
+void meta_kms_update_set_vrr_mode (MetaKmsUpdate *update,
+                                   MetaKmsCrtc   *crtc,
+                                   gboolean       is_active);
+
 META_EXPORT_TEST
 MetaKmsPlaneAssignment * meta_kms_update_assign_plane (MetaKmsUpdate          *update,
                                                        MetaKmsCrtc            *crtc,

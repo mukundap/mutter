@@ -127,7 +127,7 @@ struct _ClutterStagePrivate
 
   int update_freeze_count;
 
-  gboolean pending_finish_queue_redraws;
+  gboolean needs_update_devices;
 
   GHashTable *pointer_devices;
   GHashTable *touch_sequences;
@@ -2443,6 +2443,36 @@ clutter_stage_schedule_update (ClutterStage *stage)
     }
 }
 
+/**
+ * clutter_stage_schedule_actor_update:
+ * @stage: a #ClutterStage actor
+ * @actor: a #ClutterActor which requires an update
+ *
+ * Schedules a redraw of the #ClutterStage at the next optimal timestamp
+ * for the specified actor.
+ */
+void
+clutter_stage_schedule_actor_update (ClutterStage *stage,
+                                     ClutterActor *actor)
+{
+  ClutterStageWindow *stage_window;
+  GList *l;
+
+  if (CLUTTER_ACTOR_IN_DESTRUCTION (stage))
+    return;
+
+  stage_window = _clutter_stage_get_window (stage);
+  if (stage_window == NULL)
+    return;
+
+  for (l = clutter_stage_peek_stage_views (stage); l; l = l->next)
+    {
+      ClutterStageView *view = l->data;
+
+      clutter_stage_view_schedule_actor_update (view, actor);
+    }
+}
+
 ClutterPaintVolume *
 _clutter_stage_paint_volume_stack_allocate (ClutterStage *stage)
 {
@@ -2494,19 +2524,7 @@ clutter_stage_queue_actor_redraw (ClutterStage             *stage,
   CLUTTER_NOTE (CLIPPING, "stage_queue_actor_redraw (actor=%s, clip=%p): ",
                 _clutter_actor_get_debug_name (actor), clip);
 
-  if (!priv->pending_finish_queue_redraws)
-    {
-      GList *l;
-
-      for (l = clutter_stage_peek_stage_views (stage); l; l = l->next)
-        {
-          ClutterStageView *view = l->data;
-
-          clutter_stage_view_schedule_update (view);
-        }
-
-      priv->pending_finish_queue_redraws = TRUE;
-    }
+  clutter_stage_schedule_actor_update (stage, actor);
 
   entry = g_hash_table_lookup (priv->pending_queue_redraws, actor);
 
@@ -2629,11 +2647,6 @@ clutter_stage_maybe_finish_queue_redraws (ClutterStage *stage)
   gpointer key, value;
 
   COGL_TRACE_BEGIN_SCOPED (ClutterStageFinishQueueRedraws, "FinishQueueRedraws");
-
-  if (!priv->pending_finish_queue_redraws)
-    return;
-
-  priv->pending_finish_queue_redraws = FALSE;
 
   g_hash_table_iter_init (&iter, priv->pending_queue_redraws);
   while (g_hash_table_iter_next (&iter, &key, &value))

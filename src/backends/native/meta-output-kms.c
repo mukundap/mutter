@@ -138,6 +138,27 @@ meta_output_kms_set_privacy_screen_enabled (MetaOutput  *output,
   return TRUE;
 }
 
+void
+meta_output_kms_set_vrr_mode (MetaOutputKms *output_kms,
+                              MetaKmsUpdate *kms_update)
+{
+  MetaOutput *output = META_OUTPUT (output_kms);
+  const MetaOutputInfo *output_info = meta_output_get_info (output);
+  MetaCrtc *crtc;
+  MetaKmsCrtc *kms_crtc;
+
+  if (!output_info->vrr_capable)
+    return;
+
+  crtc = meta_output_get_assigned_crtc (output);
+  kms_crtc = meta_crtc_kms_get_kms_crtc (META_CRTC_KMS (crtc));
+
+  meta_kms_update_set_vrr_mode (kms_update,
+                                kms_crtc,
+                                (meta_output_is_vrr_enabled (output) &&
+                                meta_output_is_vrr_requested (output)));
+}
+
 uint32_t
 meta_output_kms_get_connector_id (MetaOutputKms *output_kms)
 {
@@ -404,6 +425,8 @@ meta_output_kms_new (MetaGpuKms        *gpu_kms,
   output_info->hotplug_mode_update = connector_state->hotplug_mode_update;
   output_info->supports_underscanning =
     meta_kms_connector_is_underscanning_supported (kms_connector);
+
+  output_info->vrr_capable = connector_state->vrr_capable;
 
   meta_output_info_parse_edid (output_info, connector_state->edid_data);
 

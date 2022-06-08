@@ -1,5 +1,7 @@
+/* -*- mode: C; c-file-style: "gnu"; indent-tabs-mode: nil; -*- */
+
 /*
- * Copyright (C) 2019 Red Hat Inc.
+ * Copyright (C) 2020 Dor Askayo
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -16,21 +18,20 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
  * 02111-1307, USA.
  *
+ * Written by:
+ *     Dor Askayo <dor.askayo@gmail.com>
  */
 
-#ifndef META_COMPOSITOR_NATIVE_H
-#define META_COMPOSITOR_NATIVE_H
+#ifndef META_RENDERER_VIEW_NATIVE_H
+#define META_RENDERER_VIEW_NATIVE_H
 
-#include "compositor/meta-compositor-server.h"
+#include "backends/meta-renderer-view.h"
 
-#define META_TYPE_COMPOSITOR_NATIVE (meta_compositor_native_get_type ())
-G_DECLARE_FINAL_TYPE (MetaCompositorNative, meta_compositor_native,
-                      META, COMPOSITOR_NATIVE, MetaCompositor)
+#define META_TYPE_RENDERER_VIEW_NATIVE (meta_renderer_view_native_get_type ())
+G_DECLARE_FINAL_TYPE (MetaRendererViewNative, meta_renderer_view_native,
+                      META, RENDERER_VIEW_NATIVE, MetaRendererView)
 
-void meta_compositor_native_request_frame_sync (MetaCompositorNative *compositor_native,
-                                                MetaSurfaceActor     *surface_actor);
+void meta_renderer_view_native_set_frame_sync_actor (MetaRendererViewNative *view_native,
+                                                     ClutterActor           *actor);
 
-MetaCompositorNative * meta_compositor_native_new (MetaDisplay *display,
-                                                   MetaBackend *backend);
-
-#endif /* META_COMPOSITOR_NATIVE_H */
+#endif /* META_RENDERER_VIEW_NATIVE_H */
